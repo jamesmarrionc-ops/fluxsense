@@ -596,7 +596,6 @@
 
 <div class="flash-overlay" id="flash"></div>
 
-<!-- BOOT -->
 <div id="screen-boot" class="screen active">
   <div class="boot-logo">FLUX<span>S</span>ENSE</div>
   <div class="boot-tagline">Magnetic Field Detector · Performer Tool</div>
@@ -607,7 +606,6 @@
   </div>
 </div>
 
-<!-- MAIN -->
 <div id="screen-main" class="screen">
 
   <div class="topbar">
@@ -624,7 +622,6 @@
     <div class="tab" onclick="switchTab('calibrate')">CALIBRATE</div>
   </div>
 
-  <!-- DETECT -->
   <div class="tab-content active" id="tab-detect">
     <div class="inner-pad">
 
@@ -636,12 +633,10 @@
         <button class="perm-btn" onclick="requestPermission()">GRANT SENSOR ACCESS</button>
       </div>
 
-      <!-- GAUGE -->
       <div class="meter-card">
         <div class="card-label">Magnetic Field Strength</div>
         <div class="gauge-wrap">
           <svg class="gauge-svg" viewBox="0 0 180 110">
-            <!-- semicircle arc r=72 cx=90 cy=95 -->
             <path class="gauge-track"
               d="M 18 95 A 72 72 0 0 1 162 95"/>
             <path class="gauge-fill" id="gauge-fill"
@@ -655,7 +650,6 @@
         <div class="field-bars" id="field-bars"></div>
       </div>
 
-      <!-- XYZ -->
       <div class="xyz-row">
         <div class="xyz-card">
           <div class="xyz-axis">X</div>
@@ -671,13 +665,11 @@
         </div>
       </div>
 
-      <!-- TRIGGER -->
       <div class="trigger-alert" id="trigger-alert">
         <div class="trigger-dot"></div>
         <div class="trigger-text" id="trigger-text">FIELD DETECTED</div>
       </div>
 
-      <!-- START -->
       <button class="main-btn" id="start-btn" onclick="toggleDetection()">
         <div class="pulse-ring"></div>
         <span id="start-btn-text">BEGIN DETECTION</span>
@@ -686,7 +678,6 @@
     </div>
   </div>
 
-  <!-- CONFIG -->
   <div class="tab-content" id="tab-config">
     <div class="inner-pad">
 
@@ -791,7 +782,6 @@
     </div>
   </div>
 
-  <!-- CALIBRATE -->
   <div class="tab-content" id="tab-calibrate">
     <div class="inner-pad">
 
@@ -865,7 +855,6 @@ function initApp() {
   document.getElementById('screen-main').classList.add('active');
   detectSensor();
   initAudio();
-  keepAwake();
 }
 
 // ── SENSOR DETECT ──
@@ -995,27 +984,33 @@ function startOrientation() {
   window.addEventListener('deviceorientation', onOrientation, true);
 }
 
+// ── THE UPDATED COMPASS/MAGNET LOGIC ──
 function onOrientation(e) {
   if (!S.running) return;
-  const h = e.webkitCompassHeading || 0;
+  const h = e.webkitCompassHeading;
+  
+  if (h === undefined) return; 
+
   const a = e.alpha || 0, b = e.beta || 0, g = e.gamma || 0;
 
-  S.compassHistory.push(h);
-  if (S.compassHistory.length > 6) S.compassHistory.shift();
-
-  let delta = 0;
-  if (S.compassHistory.length >= 2) {
-    let sum = 0;
-    for (let i = 1; i < S.compassHistory.length; i++) {
-      let d = Math.abs(S.compassHistory[i] - S.compassHistory[i-1]);
-      if (d > 180) d = 360 - d;
-      sum += d;
-    }
-    delta = sum / (S.compassHistory.length - 1);
+  if (S.baseline === null) {
+      S.baseline = h;
+      document.getElementById('baseline-num').textContent = h.toFixed(1);
   }
 
-  const pseudo = Math.min(delta * 2.8, 300);
-  process(pseudo, a, b, g);
+  let diff = h - S.baseline;
+  
+  diff = (diff + 180) % 360 - 180;
+  if (diff < -180) diff += 360;
+
+  let delta = Math.abs(diff);
+  let pseudoMag = S.baseline + delta;
+
+  if (delta > 0) {
+      pseudoMag = S.baseline + (delta * 1.5); 
+  }
+
+  process(pseudoMag, a, b, g);
 }
 
 let demoT = 0;
@@ -1179,17 +1174,9 @@ function toast(msg) {
     t.style.cssText = 'position:fixed;bottom:36px;left:50%;transform:translateX(-50%);background:var(--accent);color:#000;font-family:Syne,sans-serif;font-size:10px;font-weight:800;letter-spacing:2px;padding:10px 18px;z-index:10000;opacity:0;transition:opacity 0.2s;white-space:nowrap;pointer-events:none;';
     document.body.appendChild(t);
   }
-  t.textContent = msg.toUpperCase();
+  t.textContent = msg;
   t.style.opacity = '1';
-  clearTimeout(t._t);
-  t._t = setTimeout(() => t.style.opacity='0', 2000);
-}
-
-// ── WAKE LOCK ──
-async function keepAwake() {
-  try {
-    if ('wakeLock' in navigator) await navigator.wakeLock.request('screen');
-  } catch(e) {}
+  setTimeout(() => t.style.opacity = '0', 2000);
 }
 </script>
 </body>
