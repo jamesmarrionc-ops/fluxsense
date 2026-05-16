@@ -8,35 +8,35 @@
 <meta name="apple-mobile-web-app-title" content="Atlas Sync">
 <title>ATLAS SYNC</title>
 <style>
-/* ═══════════════════════════════════════════════════════
-   RESET & ROOT
-═══════════════════════════════════════════════════════ */
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Space+Mono:wght@400;700&display=swap');
+
+/* ══════════════════════════════════
+   TOKENS
+══════════════════════════════════ */
 :root {
-  --bg:          #000000;
-  --bg2:         #0a0a0a;
-  --surface:     #0f0f0f;
-  --surface2:    #141414;
-  --border:      #1a1a1a;
-  --border2:     #222222;
-  --accent:      #c8ff00;       /* lime — primary action */
-  --accent-dim:  rgba(200,255,0,0.08);
-  --accent-glow: rgba(200,255,0,0.15);
-  --text:        #e8e8e8;
-  --text-dim:    #3a3a3a;
-  --text-muted:  #555555;
-  --danger:      #ff3232;
-  --warn:        #ffaa00;
-  --safe:        #00ff88;
-  --mono:        'Space Mono', monospace;
-  --sans:        'Syne', sans-serif;
+  --bg:       #080808;
+  --surface:  #111111;
+  --surface2: #161616;
+  --border:   #1e1e1e;
+  --border2:  #252525;
+  --accent:   #c8ff00;
+  --accent2:  #3caaff;
+  --text:     #f0f0f0;
+  --muted:    #505050;
+  --danger:   #ff3c3c;
+  --warn:     #ffaa00;
+  --sans:     'Syne', sans-serif;
+  --mono:     'Space Mono', monospace;
 }
 
+/* ══════════════════════════════════
+   RESET
+══════════════════════════════════ */
 *, *::before, *::after {
   margin: 0; padding: 0;
   box-sizing: border-box;
   -webkit-tap-highlight-color: transparent;
   -webkit-touch-callout: none;
-  -webkit-user-select: none;
   user-select: none;
   touch-action: none;
 }
@@ -47,552 +47,594 @@ html, body {
   background: var(--bg);
   color: var(--text);
   font-family: var(--sans);
-  position: fixed;
-  inset: 0;
-  overscroll-behavior: none;
-  -webkit-overflow-scrolling: none;
+  position: fixed; inset: 0;
 }
 
-/* Noise grain overlay — adds depth to pitch black bg */
-body::after {
+/* Noise grain */
+body::before {
   content: '';
   position: fixed; inset: 0;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.025'/%3E%3C/svg%3E");
-  pointer-events: none;
-  z-index: 9000;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.028'/%3E%3C/svg%3E");
+  pointer-events: none; z-index: 9999;
 }
 
-/* ═══════════════════════════════════════════════════════
-   FONT IMPORTS
-═══════════════════════════════════════════════════════ */
-@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap');
-
-/* ═══════════════════════════════════════════════════════
-   VIEW SYSTEM — instant switch, no fade
-═══════════════════════════════════════════════════════ */
+/* ══════════════════════════════════
+   VIEW SYSTEM
+══════════════════════════════════ */
 .view {
-  display: none;
+  display: none; flex-direction: column;
   position: fixed; inset: 0;
   width: 100%; height: 100%;
-  background: var(--bg);
-  overflow: hidden;
+  background: var(--bg); overflow: hidden;
 }
-
 .view.active { display: flex; }
 
-/* ═══════════════════════════════════════════════════════
-   VIEW 1 — HOME
-═══════════════════════════════════════════════════════ */
+/* ══════════════════════════════════
+   HIDDEN ELEMENTS
+══════════════════════════════════ */
+#haptic-hack, #camera-feed, #camera-canvas {
+  position: fixed; top: -9999px; left: -9999px;
+  width: 1px; height: 1px;
+  opacity: 0; pointer-events: none;
+}
+
+/* ══════════════════════════════════
+   VIEW 1 — HOME (Boot style)
+══════════════════════════════════ */
 #view-home {
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: #000;
+  padding: 40px 28px;
+  position: relative;
 }
 
-/* Subtle crosshair grid lines — barely visible */
-#view-home::before {
+/* Top left corner bracket */
+#view-home::before,
+#view-home::after {
   content: '';
-  position: absolute; inset: 0;
-  background-image:
-    linear-gradient(rgba(255,255,255,0.012) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255,255,255,0.012) 1px, transparent 1px);
-  background-size: 48px 48px;
-  pointer-events: none;
+  position: absolute;
+  width: 20px; height: 20px;
+  border-color: var(--border2);
+  border-style: solid;
+}
+#view-home::before {
+  top: max(20px, env(safe-area-inset-top, 20px));
+  left: 20px;
+  border-width: 1px 0 0 1px;
+}
+#view-home::after {
+  bottom: max(20px, env(safe-area-inset-bottom, 20px));
+  right: 20px;
+  border-width: 0 1px 1px 0;
 }
 
-/* Center crosshair dot */
-.home-center-dot {
-  position: absolute;
-  top: 50%; left: 50%;
-  transform: translate(-50%, calc(-50% - 40px));
-  width: 3px; height: 3px;
-  border-radius: 50%;
-  background: var(--text-dim);
+.home-eyebrow {
+  font-family: var(--mono);
+  font-size: 8px;
+  letter-spacing: 4px;
+  color: var(--muted);
+  text-transform: uppercase;
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.home-eyebrow::before,
+.home-eyebrow::after {
+  content: '';
+  display: block;
+  width: 24px; height: 1px;
+  background: var(--border2);
 }
 
 .home-logo {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 6px;
-  color: var(--text-dim);
-  text-transform: uppercase;
-  font-family: var(--mono);
-  margin-bottom: 60px;
-  position: relative;
-}
-
-.home-logo::before {
-  content: '◈';
-  display: block;
+  font-size: clamp(28px, 8.5vw, 42px);
+  font-weight: 800;
+  letter-spacing: -1px;
+  line-height: 1.1;
   text-align: center;
-  font-size: 14px;
-  color: var(--border2);
-  margin-bottom: 14px;
-  letter-spacing: 0;
+  animation: fadeUp 0.7s cubic-bezier(0.16,1,0.3,1) both;
+  width: 100%;
+  max-width: 320px;
+  word-break: keep-all;
+  white-space: nowrap;
+  overflow: visible;
 }
 
-/* Navigation buttons — minimal text, barely there */
-.home-nav {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-}
+.home-logo span { color: var(--accent); }
 
-.home-btn {
-  background: none;
-  border: none;
-  font-family: var(--mono);
-  font-size: 11px;
-  font-weight: 400;
+.home-logo .sub {
+  display: block;
+  font-size: clamp(12px, 3.5vw, 16px);
+  font-weight: 600;
   letter-spacing: 4px;
-  color: var(--text-dim);
-  cursor: pointer;
-  padding: 12px 20px;
-  text-transform: uppercase;
-  transition: color 0.3s;
-  position: relative;
-}
-
-.home-btn::before,
-.home-btn::after {
-  color: #2a2a2a;
-  transition: color 0.3s;
-}
-
-.home-btn:first-child::before { content: '[ '; }
-.home-btn:first-child::after  { content: ' ]'; }
-.home-btn:last-child::before  { content: '[ '; }
-.home-btn:last-child::after   { content: ' ]'; }
-
-.home-btn:active {
-  color: var(--text-muted);
-}
-
-/* Version stamp — bottom right, barely visible */
-.home-version {
-  position: absolute;
-  bottom: max(20px, env(safe-area-inset-bottom, 20px));
-  right: 20px;
+  color: var(--muted);
+  margin-top: 4px;
   font-family: var(--mono);
-  font-size: 7px;
-  color: #1e1e1e;
-  letter-spacing: 2px;
 }
 
-/* ═══════════════════════════════════════════════════════
-   VIEW 2 — SETTINGS
-═══════════════════════════════════════════════════════ */
-#view-settings {
-  flex-direction: column;
-  background: var(--bg);
-  overflow: hidden;
+.home-tagline {
+  font-family: var(--mono);
+  font-size: 8px;
+  letter-spacing: 3px;
+  color: var(--muted);
+  text-transform: uppercase;
+  margin-top: 10px;
+  text-align: center;
+  animation: fadeUp 0.7s 0.1s cubic-bezier(0.16,1,0.3,1) both;
 }
 
-.settings-topbar {
-  flex-shrink: 0;
+/* Info card — like FluxSense boot info */
+.home-info {
+  margin-top: 36px;
+  width: 100%; max-width: 320px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 16px;
+  animation: fadeUp 0.7s 0.2s cubic-bezier(0.16,1,0.3,1) both;
+}
+
+.home-info-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 20px;
-  padding-top: max(16px, env(safe-area-inset-top, 16px));
+  padding: 8px 0;
   border-bottom: 1px solid var(--border);
-  background: var(--bg);
+}
+.home-info-row:last-child { border-bottom: none; }
+
+.home-info-label {
+  font-family: var(--mono);
+  font-size: 8px; color: var(--muted);
+  letter-spacing: 2px; text-transform: uppercase;
 }
 
-.settings-back {
+.home-info-value {
+  font-family: var(--mono);
+  font-size: 9px; color: var(--text);
+  letter-spacing: 1px;
+}
+
+.home-info-value.accent { color: var(--accent); }
+.home-info-value.dim { color: var(--muted); }
+
+/* CTA Buttons */
+.home-actions {
+  margin-top: 16px;
+  width: 100%; max-width: 320px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  animation: fadeUp 0.7s 0.3s cubic-bezier(0.16,1,0.3,1) both;
+}
+
+.home-cta-primary {
+  padding: 18px;
+  background: var(--accent);
+  color: #000;
+  border: none;
+  font-family: var(--sans);
+  font-size: 12px; font-weight: 800;
+  letter-spacing: 3px; text-transform: uppercase;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  transition: opacity 0.15s;
+}
+.home-cta-primary:active { opacity: 0.75; }
+
+.home-cta-secondary {
+  padding: 15px;
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid var(--border);
+  font-family: var(--sans);
+  font-size: 11px; font-weight: 700;
+  letter-spacing: 3px; text-transform: uppercase;
+  cursor: pointer;
+  width: 100%;
+  transition: all 0.15s;
+}
+.home-cta-secondary:active {
+  color: var(--text);
+  border-color: var(--border2);
+}
+
+.cta-icon {
+  width: 14px; height: 14px;
+  border: 2px solid #000;
+  border-radius: 50%; flex-shrink: 0;
+  position: relative;
+}
+.cta-icon::after {
+  content: '';
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  width: 5px; height: 5px;
+  background: #000;
+  border-radius: 50%;
+}
+
+/* Bottom stamp */
+.home-stamp {
+  position: absolute;
+  bottom: max(20px, env(safe-area-inset-bottom, 20px));
+  left: 20px;
+  font-family: var(--mono);
+  font-size: 7px; color: var(--border2);
+  letter-spacing: 2px; text-transform: uppercase;
+  animation: fadeUp 0.7s 0.4s cubic-bezier(0.16,1,0.3,1) both;
+}
+
+/* ══════════════════════════════════
+   VIEW 2 — SETTINGS
+══════════════════════════════════ */
+#view-settings { flex-direction: column; }
+
+/* Topbar — same pattern as FluxSense/Phantom */
+.topbar {
+  flex-shrink: 0;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 18px;
+  padding-top: max(14px, env(safe-area-inset-top, 14px));
+  border-bottom: 1px solid var(--border);
+  background: var(--bg); width: 100%;
+}
+
+.topbar-logo {
+  font-size: 15px; font-weight: 800; letter-spacing: -0.5px;
+}
+.topbar-logo span { color: var(--accent); }
+
+.topbar-action {
   background: none; border: none;
   font-family: var(--mono);
-  font-size: 9px; font-weight: 400;
-  letter-spacing: 3px; color: var(--text-muted);
-  text-transform: uppercase; cursor: pointer;
-  display: flex; align-items: center; gap: 8px;
-  padding: 8px 0; transition: color 0.2s;
+  font-size: 9px; color: var(--muted);
+  letter-spacing: 2px; text-transform: uppercase;
+  cursor: pointer; display: flex;
+  align-items: center; gap: 6px;
+  transition: color 0.2s; padding: 6px 0;
 }
+.topbar-action:active { color: var(--text); }
 
-.settings-back:active { color: var(--text); }
-
-.settings-back-arrow {
-  font-size: 14px; color: var(--text-dim); transition: color 0.2s;
-}
-
-.settings-title {
+.topbar-right {
   font-family: var(--mono);
-  font-size: 9px; letter-spacing: 4px;
-  color: var(--text-dim); text-transform: uppercase;
+  font-size: 9px; color: var(--border2);
+  letter-spacing: 2px;
 }
 
-/* Scrollable settings body */
-.settings-body {
+/* Scrollable body */
+.settings-scroll {
   flex: 1;
-  overflow-y: auto;
-  overflow-x: hidden;
+  overflow-y: auto; overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
   touch-action: pan-y;
-  padding: 0 0 max(40px, env(safe-area-inset-bottom, 40px));
+  padding-bottom: max(32px, env(safe-area-inset-bottom, 32px));
 }
 
-.settings-section {
-  padding: 24px 20px 0;
-}
+/* Section group */
+.s-group { padding: 20px 18px 0; }
 
-.settings-section-label {
+.s-group-title {
   font-family: var(--mono);
-  font-size: 7px; letter-spacing: 4px;
-  color: var(--text-dim); text-transform: uppercase;
-  margin-bottom: 12px;
+  font-size: 8px; letter-spacing: 4px;
+  color: var(--muted); text-transform: uppercase;
+  margin-bottom: 10px;
   padding-bottom: 8px;
   border-bottom: 1px solid var(--border);
 }
 
-/* Settings row */
+/* Settings row — card style like FluxSense */
 .s-row {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 13px 14px;
   display: flex; align-items: center;
-  justify-content: space-between; gap: 16px;
-  padding: 14px 0;
-  border-bottom: 1px solid var(--border);
+  justify-content: space-between; gap: 12px;
+  margin-bottom: 6px;
 }
 
-.s-row:last-child { border-bottom: none; }
+.s-row-info { flex: 1; min-width: 0; }
 
-.s-row-left { flex: 1; min-width: 0; }
-
-.s-label {
-  font-size: 13px; font-weight: 500;
+.s-lbl {
+  font-size: 13px; font-weight: 600;
   color: var(--text); margin-bottom: 3px;
 }
 
-.s-desc {
+.s-sub {
   font-family: var(--mono);
-  font-size: 8px; color: var(--text-muted);
+  font-size: 8px; color: var(--muted);
   letter-spacing: 0.3px; line-height: 1.7;
 }
 
-/* SELECT / DROPDOWN */
+/* SELECT */
 .s-select {
   background: var(--surface2);
   border: 1px solid var(--border2);
   color: var(--text);
   font-family: var(--mono);
-  font-size: 10px; letter-spacing: 1px;
-  padding: 8px 12px;
-  cursor: pointer;
-  outline: none;
+  font-size: 9px; letter-spacing: 1px;
+  padding: 8px 10px;
+  cursor: pointer; outline: none;
   -webkit-appearance: none;
   appearance: none;
-  min-width: 110px;
+  min-width: 100px;
   text-align: right;
-  border-radius: 0;
+  transition: border-color 0.15s;
+}
+.s-select:focus { border-color: var(--muted); }
+
+/* SLIDER — same as FluxSense */
+.slider-box {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 13px 14px;
+  display: flex; flex-direction: column; gap: 8px;
+  margin-bottom: 6px;
 }
 
-.s-select:focus { border-color: var(--text-dim); }
-
-/* SLIDER */
-.slider-wrap {
-  display: flex; flex-direction: column;
-  align-items: flex-end; gap: 4px;
+.slider-hdr {
+  display: flex; justify-content: space-between; align-items: center;
 }
 
-.slider-display {
+.slider-val {
   font-family: var(--mono);
   font-size: 11px; color: var(--accent);
-  letter-spacing: 1px; min-width: 40px;
-  text-align: right;
+  letter-spacing: 1px; white-space: nowrap;
 }
 
-input[type=range].s-slider {
+input[type=range] {
   -webkit-appearance: none; appearance: none;
-  width: 120px; height: 2px;
-  background: var(--border2);
-  outline: none; border-radius: 1px;
+  width: 100%; height: 3px;
+  background: var(--border);
+  outline: none; border-radius: 2px;
   touch-action: pan-x;
 }
-
-input[type=range].s-slider::-webkit-slider-thumb {
+input[type=range]::-webkit-slider-thumb {
   -webkit-appearance: none;
-  width: 20px; height: 20px;
-  border-radius: 50%;
-  background: var(--text-muted);
-  cursor: pointer;
-  border: 2px solid var(--bg);
-  box-shadow: 0 0 0 1px var(--border2);
-  transition: background 0.15s;
+  width: 22px; height: 22px; border-radius: 50%;
+  background: var(--accent); cursor: pointer;
+  border: 3px solid var(--bg);
+  box-shadow: 0 0 0 1px var(--accent);
 }
 
-input[type=range].s-slider:active::-webkit-slider-thumb {
-  background: var(--accent);
-}
-
-/* TOGGLE SWITCH */
+/* TOGGLE — same as FluxSense */
 .toggle {
-  width: 44px; height: 24px;
-  background: var(--border2);
-  border-radius: 12px;
-  position: relative;
-  cursor: pointer;
-  transition: background 0.25s;
-  flex-shrink: 0;
+  width: 42px; height: 23px;
+  background: var(--border);
+  border-radius: 12px; position: relative;
+  cursor: pointer; transition: background 0.2s; flex-shrink: 0;
 }
-
 .toggle.on { background: var(--accent); }
-
-.toggle-knob {
-  position: absolute;
-  top: 3px; left: 3px;
-  width: 18px; height: 18px;
-  background: var(--text-muted);
-  border-radius: 50%;
-  transition: transform 0.25s, background 0.25s;
+.toggle-thumb {
+  position: absolute; top: 3px; left: 3px;
+  width: 17px; height: 17px; background: var(--muted);
+  border-radius: 50%; transition: transform 0.2s, background 0.2s;
 }
-
-.toggle.on .toggle-knob {
-  transform: translateX(20px);
-  background: #000;
+.toggle.on .toggle-thumb {
+  transform: translateX(19px); background: #000;
 }
 
 /* Practice mode banner */
 .practice-banner {
-  margin: 16px 20px 0;
-  padding: 10px 14px;
-  background: rgba(255,170,0,0.06);
+  margin: 4px 18px 0;
+  padding: 12px 14px;
+  background: rgba(255,170,0,0.05);
   border: 1px solid rgba(255,170,0,0.2);
   display: none;
 }
-
 .practice-banner.show { display: block; }
-
 .practice-banner-txt {
   font-family: var(--mono);
   font-size: 8px; color: var(--warn);
-  letter-spacing: 1px; line-height: 2;
+  letter-spacing: 0.5px; line-height: 2;
 }
 
-/* ═══════════════════════════════════════════════════════
+/* ══════════════════════════════════
    VIEW 3 — PERFORM
-═══════════════════════════════════════════════════════ */
+══════════════════════════════════ */
 #view-perform {
-  flex-direction: column;
   background: #000;
-  overflow: hidden;
   position: relative;
 }
 
-/* The main map/content container */
 #map-container {
   position: absolute; inset: 0;
   background: #000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
+  display: flex; align-items: center; justify-content: center;
 }
 
-/* World map aesthetic — subtle grid overlay */
-#map-container.world-map-aesthetic::before {
+/* World map grid aesthetic */
+#map-container.world-map::before {
   content: '';
   position: absolute; inset: 0;
   background-image:
-    linear-gradient(rgba(200,255,0,0.015) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(200,255,0,0.015) 1px, transparent 1px),
-    radial-gradient(ellipse 70% 40% at 50% 50%, rgba(200,255,0,0.02) 0%, transparent 100%);
-  background-size: 40px 40px, 40px 40px, 100% 100%;
+    linear-gradient(rgba(200,255,0,0.012) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(200,255,0,0.012) 1px, transparent 1px);
+  background-size: 36px 36px;
+  pointer-events: none;
+}
+#map-container.world-map::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: radial-gradient(ellipse 70% 50% at 50% 50%, rgba(200,255,0,0.018) 0%, transparent 70%);
   pointer-events: none;
 }
 
-/* Standby state — shown before scan */
-.perform-standby {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 0;
-  opacity: 1;
-  transition: opacity 0.2s;
-  z-index: 1;
+/* ── STANDBY ── */
+.p-standby {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 0;
+  z-index: 1; transition: opacity 0.2s;
 }
+.p-standby.hidden { opacity: 0; pointer-events: none; }
 
-.perform-standby.hidden { opacity: 0; pointer-events: none; }
-
-.standby-ring {
-  width: 60px; height: 60px;
-  border: 1px solid #1a1a1a;
-  border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
+.standby-ring-wrap {
+  width: 72px; height: 72px;
   position: relative;
+  display: flex; align-items: center; justify-content: center;
   margin-bottom: 20px;
 }
 
-.standby-ring::before {
-  content: '';
-  position: absolute; inset: 6px;
-  border: 1px solid #111;
-  border-radius: 50%;
-}
-
-.standby-ring-dot {
-  width: 4px; height: 4px;
-  border-radius: 50%;
-  background: #222;
-}
-
-.standby-label {
-  font-family: var(--mono);
-  font-size: 8px; letter-spacing: 4px;
-  color: #1e1e1e; text-transform: uppercase;
-}
-
-/* SCANNING STATE — shown during active scan */
-.perform-scanning {
+.standby-ring-outer {
   position: absolute; inset: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  opacity: 0; pointer-events: none;
-  transition: opacity 0.15s;
-  z-index: 2;
+  border: 1px solid var(--border);
+  border-radius: 50%;
 }
 
-.perform-scanning.active { opacity: 1; pointer-events: all; }
+.standby-ring-inner {
+  position: absolute; inset: 10px;
+  border: 1px solid #161616;
+  border-radius: 50%;
+}
 
-/* Animated scan ring */
-.scan-ring-wrap {
+.standby-dot {
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: var(--border2);
+}
+
+.standby-lbl {
+  font-family: var(--mono);
+  font-size: 8px; letter-spacing: 5px;
+  color: var(--border2); text-transform: uppercase;
+}
+
+/* ── SCANNING ── */
+.p-scanning {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.15s; z-index: 2;
+}
+.p-scanning.active { opacity: 1; pointer-events: all; }
+
+.scan-rings {
+  width: 150px; height: 150px;
   position: relative;
-  width: 140px; height: 140px;
   display: flex; align-items: center; justify-content: center;
   margin-bottom: 28px;
 }
 
-.scan-ring {
+.scan-r {
   position: absolute; inset: 0;
   border-radius: 50%;
-  border: 1px solid transparent;
+  border: 1px solid var(--border);
 }
+.scan-r2 { inset: 16px; border-color: #161616; }
+.scan-r3 { inset: 32px; border-color: #141414; }
 
-.scan-ring-1 {
-  border-color: #1a1a1a;
-  animation: ring-pulse 2.4s ease-in-out infinite;
-}
-.scan-ring-2 {
-  inset: 14px;
-  border-color: #141414;
-  animation: ring-pulse 2.4s 0.4s ease-in-out infinite;
-}
-.scan-ring-3 {
-  inset: 28px;
-  border-color: #111;
-  animation: ring-pulse 2.4s 0.8s ease-in-out infinite;
-}
+.scan-r  { animation: rpulse 2.4s ease-in-out infinite; }
+.scan-r2 { animation: rpulse 2.4s 0.4s ease-in-out infinite; }
+.scan-r3 { animation: rpulse 2.4s 0.8s ease-in-out infinite; }
 
-/* The sweeping scan line */
 .scan-sweep {
   position: absolute; inset: 0;
   border-radius: 50%;
   background: conic-gradient(
     from 0deg,
     transparent 0deg,
-    transparent 270deg,
-    rgba(200,255,0,0.04) 290deg,
-    rgba(200,255,0,0.12) 360deg
+    transparent 260deg,
+    rgba(200,255,0,0.05) 285deg,
+    rgba(200,255,0,0.14) 360deg
   );
   animation: sweep 2.4s linear infinite;
 }
 
-.scan-center {
-  width: 6px; height: 6px;
-  border-radius: 50%;
-  background: #1e1e1e;
+.scan-dot {
+  width: 5px; height: 5px;
+  border-radius: 50%; background: #222;
   position: relative; z-index: 1;
 }
 
-.scan-label {
+.scan-status {
   font-family: var(--mono);
   font-size: 8px; letter-spacing: 5px;
   color: #2a2a2a; text-transform: uppercase;
-  animation: label-blink 2.4s ease-in-out infinite;
+  animation: lblink 2.4s ease-in-out infinite;
 }
 
-/* RESULT STATE — shown after location found */
-.perform-result {
+/* ── RESULT ── */
+.p-result {
   position: absolute; inset: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 40px 32px;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 40px 28px;
   opacity: 0; pointer-events: none;
-  transition: opacity 0.2s;
-  z-index: 3;
+  transition: opacity 0.2s; z-index: 3;
 }
-
-.perform-result.active { opacity: 1; pointer-events: all; }
+.p-result.active { opacity: 1; pointer-events: all; }
 
 .result-eyebrow {
   font-family: var(--mono);
   font-size: 7px; letter-spacing: 5px;
-  color: var(--text-dim); text-transform: uppercase;
-  margin-bottom: 16px;
+  color: var(--muted); text-transform: uppercase;
+  margin-bottom: 14px;
 }
 
-.result-location {
-  font-size: clamp(22px, 6vw, 30px);
-  font-weight: 800;
-  letter-spacing: -1px;
-  color: var(--text);
-  text-align: center;
-  line-height: 1.2;
-  margin-bottom: 10px;
+.result-name {
+  font-size: clamp(22px, 6vw, 32px);
+  font-weight: 800; letter-spacing: -1px;
+  color: var(--text); text-align: center;
+  line-height: 1.2; margin-bottom: 8px;
 }
 
 .result-coords {
   font-family: var(--mono);
-  font-size: 9px; letter-spacing: 2px;
-  color: var(--text-dim);
-  margin-bottom: 32px;
+  font-size: 9px; letter-spacing: 1px;
+  color: var(--muted); margin-bottom: 28px;
 }
 
+/* Confidence bar — same as FluxSense */
 .result-conf {
-  display: flex; align-items: center; gap: 8px;
+  width: 100%; max-width: 200px;
+  display: flex; flex-direction: column; gap: 6px;
 }
 
-.result-conf-bar-track {
-  width: 80px; height: 2px;
-  background: var(--border2);
+.conf-hdr {
+  display: flex; justify-content: space-between;
+  font-family: var(--mono); font-size: 8px;
+  color: var(--muted); letter-spacing: 1px;
 }
 
-.result-conf-bar-fill {
-  height: 100%;
-  background: var(--accent);
-  width: 0%;
-  transition: width 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+.conf-val { color: var(--accent); }
+
+.conf-track {
+  width: 100%; height: 3px;
+  background: var(--border); border-radius: 2px; overflow: hidden;
 }
 
-.result-conf-label {
-  font-family: var(--mono);
-  font-size: 8px; color: var(--accent); letter-spacing: 1px;
+.conf-fill {
+  height: 100%; width: 0%;
+  background: var(--accent); border-radius: 2px;
+  transition: width 1.2s cubic-bezier(0.16,1,0.3,1);
 }
 
-/* ── PRACTICE MODE INDICATOR ── */
-.practice-indicator {
+/* ── PERFORM OVERLAYS ── */
+.practice-pill {
   position: absolute;
   top: max(14px, env(safe-area-inset-top, 14px));
   left: 50%; transform: translateX(-50%);
   font-family: var(--mono);
   font-size: 7px; letter-spacing: 3px;
-  color: var(--warn);
-  text-transform: uppercase;
-  z-index: 10;
-  opacity: 0;
-  transition: opacity 0.2s;
+  color: var(--warn); text-transform: uppercase;
+  z-index: 10; opacity: 0; transition: opacity 0.2s;
+  white-space: nowrap;
+  background: rgba(255,170,0,0.08);
+  border: 1px solid rgba(255,170,0,0.2);
+  padding: 5px 12px;
 }
+.practice-pill.show { opacity: 1; }
 
-.practice-indicator.show { opacity: 1; }
-
-/* ── GESTURE HINT — only in practice mode ── */
-.gesture-hint {
+.exit-hint {
   position: absolute;
-  bottom: max(20px, env(safe-area-inset-bottom, 20px));
+  bottom: max(18px, env(safe-area-inset-bottom, 18px));
   left: 50%; transform: translateX(-50%);
   font-family: var(--mono);
   font-size: 7px; letter-spacing: 2px;
@@ -600,119 +642,107 @@ input[type=range].s-slider:active::-webkit-slider-thumb {
   z-index: 10; white-space: nowrap;
   opacity: 0; transition: opacity 0.3s;
 }
+.exit-hint.show { opacity: 1; }
 
-.gesture-hint.show { opacity: 1; }
-
-/* ═══════════════════════════════════════════════════════
-   HIDDEN ELEMENTS (camera / haptic hack)
-═══════════════════════════════════════════════════════ */
-#haptic-hack {
-  position: fixed;
-  opacity: 0; pointer-events: none;
-  top: -9999px; left: -9999px;
-  width: 1px; height: 1px;
-}
-
-#camera-feed {
-  position: fixed;
-  top: -9999px; left: -9999px;
-  width: 1px; height: 1px;
-  opacity: 0; pointer-events: none;
-}
-
-#camera-canvas {
-  position: fixed;
-  top: -9999px; left: -9999px;
-  width: 1px; height: 1px;
-  opacity: 0; pointer-events: none;
-}
-
-/* ═══════════════════════════════════════════════════════
-   SHARED SCROLLBAR
-═══════════════════════════════════════════════════════ */
-::-webkit-scrollbar { width: 2px; }
-::-webkit-scrollbar-track { background: var(--bg); }
-::-webkit-scrollbar-thumb { background: var(--border2); }
-
-/* ═══════════════════════════════════════════════════════
+/* ══════════════════════════════════
    ANIMATIONS
-═══════════════════════════════════════════════════════ */
-@keyframes ring-pulse {
-  0%, 100% { opacity: 0.4; transform: scale(1); }
-  50%       { opacity: 0.8; transform: scale(1.03); }
+══════════════════════════════════ */
+@keyframes fadeUp {
+  from { opacity:0; transform:translateY(14px); }
+  to   { opacity:1; transform:translateY(0); }
 }
-
+@keyframes rpulse {
+  0%,100% { opacity:0.4; transform:scale(1); }
+  50%     { opacity:0.9; transform:scale(1.02); }
+}
 @keyframes sweep {
-  from { transform: rotate(0deg); }
-  to   { transform: rotate(360deg); }
+  from { transform:rotate(0deg); }
+  to   { transform:rotate(360deg); }
+}
+@keyframes lblink {
+  0%,100% { opacity:0.3; }
+  50%     { opacity:0.8; }
+}
+@keyframes pulse {
+  0%,100% { opacity:1; } 50% { opacity:0.2; }
 }
 
-@keyframes label-blink {
-  0%, 100% { opacity: 0.3; }
-  50%       { opacity: 0.7; }
-}
-
-@keyframes conf-reveal {
-  from { opacity: 0; transform: translateY(6px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
+::-webkit-scrollbar { width: 2px; }
+::-webkit-scrollbar-thumb { background: var(--border); }
 </style>
 </head>
 <body>
 
-<!-- ══════════════════════════════════════════════════════
-     HIDDEN ELEMENTS
-══════════════════════════════════════════════════════ -->
-
-<!-- iOS Haptic Hack: programmatically toggling a checkbox
-     triggers a subtle Taptic Engine buzz on iOS Safari -->
+<!-- Hidden: iOS haptic hack + camera -->
 <input type="checkbox" id="haptic-hack">
-
-<!-- Camera elements for future OCR integration -->
-<video  id="camera-feed"  autoplay playsinline muted></video>
+<video  id="camera-feed" autoplay playsinline muted></video>
 <canvas id="camera-canvas"></canvas>
 
-<!-- ══════════════════════════════════════════════════════
+<!-- ══════════════════════════════════════
      VIEW 1 — HOME
-══════════════════════════════════════════════════════ -->
+══════════════════════════════════════ -->
 <div class="view active" id="view-home">
 
-  <div class="home-center-dot"></div>
+  <div class="home-eyebrow">PERFORMER TOOL</div>
 
-  <div class="home-logo">ATLAS SYNC</div>
+  <div class="home-logo">ATLAS<span>S</span>YNC<span class="sub">GEOSENSE SYSTEM</span></div>
+  
 
-  <nav class="home-nav">
-    <button class="home-btn" id="btn-perform">PERFORM</button>
-    <button class="home-btn" id="btn-settings">SETTINGS</button>
-  </nav>
-
-  <div class="home-version">v0.1.0 · ALPHA</div>
-</div>
-
-<!-- ══════════════════════════════════════════════════════
-     VIEW 2 — SETTINGS
-══════════════════════════════════════════════════════ -->
-<div class="view" id="view-settings">
-
-  <div class="settings-topbar">
-    <button class="settings-back" id="btn-back-settings">
-      <span class="settings-back-arrow">←</span>
-      HOME
-    </button>
-    <div class="settings-title">CONFIG</div>
-    <div style="width:70px"></div><!-- spacer -->
+  <!-- Status card -->
+  <div class="home-info">
+    <div class="home-info-row">
+      <div class="home-info-label">STATUS</div>
+      <div class="home-info-value accent">READY</div>
+    </div>
+    <div class="home-info-row">
+      <div class="home-info-label">ENGINE</div>
+      <div class="home-info-value" id="home-engine-status">OFFLINE</div>
+    </div>
+    <div class="home-info-row">
+      <div class="home-info-label">CAMERA</div>
+      <div class="home-info-value dim" id="home-camera-status">NOT STARTED</div>
+    </div>
+    <div class="home-info-row">
+      <div class="home-info-label">VERSION</div>
+      <div class="home-info-value dim">v0.1.0 ALPHA</div>
+    </div>
   </div>
 
-  <div class="settings-body">
+  <!-- Action buttons -->
+  <div class="home-actions">
+    <button class="home-cta-primary" id="btn-perform">
+      <div class="cta-icon"></div>
+      PERFORM
+    </button>
+    <button class="home-cta-secondary" id="btn-settings">
+      CONFIG / SETTINGS
+    </button>
+  </div>
+
+  <div class="home-stamp">ATLAS SYNC · FOR PERFORMER USE ONLY</div>
+
+</div>
+
+<!-- ══════════════════════════════════════
+     VIEW 2 — SETTINGS
+══════════════════════════════════════ -->
+<div class="view" id="view-settings">
+
+  <div class="topbar">
+    <button class="topbar-action" id="btn-back">← HOME</button>
+    <div class="topbar-logo">ATLAS<span>S</span>YNC</div>
+    <div class="topbar-right">CONFIG</div>
+  </div>
+
+  <div class="settings-scroll">
 
     <!-- CAMERA -->
-    <div class="settings-section">
-      <div class="settings-section-label">Camera</div>
-
+    <div class="s-group">
+      <div class="s-group-title">Camera</div>
       <div class="s-row">
-        <div class="s-row-left">
-          <div class="s-label">Camera Selection</div>
-          <div class="s-desc">Which lens to use for scanning</div>
+        <div class="s-row-info">
+          <div class="s-lbl">Camera Selection</div>
+          <div class="s-sub">Which lens to scan with</div>
         </div>
         <select class="s-select" id="setting-camera">
           <option value="rear">REAR</option>
@@ -722,47 +752,43 @@ input[type=range].s-slider:active::-webkit-slider-thumb {
     </div>
 
     <!-- TIMING -->
-    <div class="settings-section">
-      <div class="settings-section-label">Timing</div>
-
-      <div class="s-row">
-        <div class="s-row-left">
-          <div class="s-label">Delay Timer</div>
-          <div class="s-desc">Seconds before scan activates</div>
+    <div class="s-group">
+      <div class="s-group-title">Timing</div>
+      <div class="slider-box">
+        <div class="slider-hdr">
+          <div class="s-row-info">
+            <div class="s-lbl">Delay Timer</div>
+            <div class="s-sub">Seconds before scan activates after trigger</div>
+          </div>
+          <div class="slider-val" id="delay-display">0 s</div>
         </div>
-        <div class="slider-wrap">
-          <div class="slider-display" id="delay-display">0s</div>
-          <input type="range" class="s-slider" id="setting-delay"
-            min="0" max="10" step="1" value="0"
-            oninput="onDelayChange(this.value)"
-            ontouchmove="onDelayChange(this.value)">
-        </div>
+        <input type="range" id="setting-delay"
+          min="0" max="10" step="1" value="0"
+          oninput="onDelayChange(this.value)">
       </div>
     </div>
 
     <!-- FEEDBACK -->
-    <div class="settings-section">
-      <div class="settings-section-label">Feedback</div>
-
+    <div class="s-group">
+      <div class="s-group-title">Feedback</div>
       <div class="s-row">
-        <div class="s-row-left">
-          <div class="s-label">Haptic Feedback</div>
-          <div class="s-desc">Buzz on successful location lock</div>
+        <div class="s-row-info">
+          <div class="s-lbl">Haptic Feedback</div>
+          <div class="s-sub">Physical buzz on location lock</div>
         </div>
         <div class="toggle on" id="toggle-haptic" onclick="onToggle('haptic')">
-          <div class="toggle-knob"></div>
+          <div class="toggle-thumb"></div>
         </div>
       </div>
     </div>
 
     <!-- AI -->
-    <div class="settings-section">
-      <div class="settings-section-label">AI Engine</div>
-
+    <div class="s-group">
+      <div class="s-group-title">AI Engine</div>
       <div class="s-row">
-        <div class="s-row-left">
-          <div class="s-label">Confidence Threshold</div>
-          <div class="s-desc">Strict = fewer but more accurate results</div>
+        <div class="s-row-info">
+          <div class="s-lbl">Confidence Threshold</div>
+          <div class="s-sub">Strict = fewer but more accurate reads</div>
         </div>
         <select class="s-select" id="setting-confidence">
           <option value="95">STRICT 95%</option>
@@ -772,13 +798,12 @@ input[type=range].s-slider:active::-webkit-slider-thumb {
     </div>
 
     <!-- DISPLAY -->
-    <div class="settings-section">
-      <div class="settings-section-label">Display</div>
-
+    <div class="s-group">
+      <div class="s-group-title">Display</div>
       <div class="s-row">
-        <div class="s-row-left">
-          <div class="s-label">Waiting Screen</div>
-          <div class="s-desc">Aesthetic shown before scan triggers</div>
+        <div class="s-row-info">
+          <div class="s-lbl">Waiting Screen</div>
+          <div class="s-sub">Visual shown before scan triggers</div>
         </div>
         <select class="s-select" id="setting-aesthetic"
           onchange="onAestheticChange(this.value)">
@@ -789,113 +814,104 @@ input[type=range].s-slider:active::-webkit-slider-thumb {
     </div>
 
     <!-- PRACTICE -->
-    <div class="settings-section">
-      <div class="settings-section-label">Practice</div>
-
+    <div class="s-group">
+      <div class="s-group-title">Practice</div>
       <div class="s-row">
-        <div class="s-row-left">
-          <div class="s-label">Practice Mode</div>
-          <div class="s-desc">Shows UI hints and simulated results</div>
+        <div class="s-row-info">
+          <div class="s-lbl">Practice Mode</div>
+          <div class="s-sub">Simulates results · disable before show</div>
         </div>
         <div class="toggle" id="toggle-practice" onclick="onToggle('practice')">
-          <div class="toggle-knob"></div>
+          <div class="toggle-thumb"></div>
         </div>
       </div>
     </div>
 
-    <!-- Practice warning -->
     <div class="practice-banner" id="practice-banner">
       <div class="practice-banner-txt">
-        PRACTICE MODE ACTIVE.<br>
-        RESULTS ARE SIMULATED. DISABLE BEFORE PERFORMING.
+        PRACTICE MODE ACTIVE — RESULTS ARE SIMULATED.<br>
+        DISABLE BEFORE PERFORMING LIVE.
       </div>
     </div>
 
-    <!-- Padding bottom -->
-    <div style="height:20px"></div>
+    <div style="height:16px"></div>
 
-  </div><!-- /settings-body -->
+  </div>
 </div>
 
-<!-- ══════════════════════════════════════════════════════
+<!-- ══════════════════════════════════════
      VIEW 3 — PERFORM
-══════════════════════════════════════════════════════ -->
+══════════════════════════════════════ -->
 <div class="view" id="view-perform">
 
-  <!-- Practice indicator -->
-  <div class="practice-indicator" id="practice-indicator">
-    ◈ PRACTICE
-  </div>
+  <div class="practice-pill" id="practice-pill">◈ PRACTICE MODE</div>
+  <div class="exit-hint" id="exit-hint">↓↓ TWO-FINGER SWIPE DOWN TO EXIT</div>
 
-  <!-- Gesture hint (only in practice mode) -->
-  <div class="gesture-hint" id="gesture-hint">
-    ↓↓ TWO-FINGER SWIPE DOWN TO EXIT
-  </div>
-
-  <!-- Main map / content container -->
   <div id="map-container">
 
-    <!-- STANDBY STATE -->
-    <div class="perform-standby" id="perform-standby">
-      <div class="standby-ring">
-        <div class="standby-ring-dot"></div>
+    <!-- STANDBY -->
+    <div class="p-standby" id="p-standby">
+      <div class="standby-ring-wrap">
+        <div class="standby-ring-outer"></div>
+        <div class="standby-ring-inner"></div>
+        <div class="standby-dot"></div>
       </div>
-      <div class="standby-label">READY</div>
+      <div class="standby-lbl">READY</div>
     </div>
 
-    <!-- SCANNING STATE -->
-    <div class="perform-scanning" id="perform-scanning">
-      <div class="scan-ring-wrap">
-        <div class="scan-ring scan-ring-1"></div>
-        <div class="scan-ring scan-ring-2"></div>
-        <div class="scan-ring scan-ring-3"></div>
+    <!-- SCANNING -->
+    <div class="p-scanning" id="p-scanning">
+      <div class="scan-rings">
+        <div class="scan-r"></div>
+        <div class="scan-r scan-r2"></div>
+        <div class="scan-r scan-r3"></div>
         <div class="scan-sweep"></div>
-        <div class="scan-center"></div>
+        <div class="scan-dot"></div>
       </div>
-      <div class="scan-label">SCANNING</div>
+      <div class="scan-status">SCANNING</div>
     </div>
 
-    <!-- RESULT STATE -->
-    <div class="perform-result" id="perform-result">
+    <!-- RESULT -->
+    <div class="p-result" id="p-result">
       <div class="result-eyebrow">Location Identified</div>
-      <div class="result-location" id="result-location-text">—</div>
-      <div class="result-coords" id="result-coords-text">—</div>
+      <div class="result-name"  id="result-name">—</div>
+      <div class="result-coords" id="result-coords">—</div>
       <div class="result-conf">
-        <div class="result-conf-bar-track">
-          <div class="result-conf-bar-fill" id="result-conf-bar"></div>
+        <div class="conf-hdr">
+          <span>CONFIDENCE</span>
+          <span class="conf-val" id="conf-val">—</span>
         </div>
-        <div class="result-conf-label" id="result-conf-label">—</div>
+        <div class="conf-track">
+          <div class="conf-fill" id="conf-fill"></div>
+        </div>
       </div>
     </div>
 
-  </div><!-- /map-container -->
+  </div>
 </div>
 
 <script>
-/* ═══════════════════════════════════════════════════════════
+/* ═══════════════════════════════════════
    ATLAS SYNC — v0.1.0
-   Base SPA framework. API stubs marked with ⬛ INJECT HERE.
-═══════════════════════════════════════════════════════════ */
+   SPA framework · API stubs marked ⬛
+═══════════════════════════════════════ */
 
-// ─────────────────────────────────────────────
-// APP STATE
-// ─────────────────────────────────────────────
-const AppState = {
-  currentView: 'home',   // 'home' | 'settings' | 'perform'
-  isScanning:  false,
-  scanTimer:   null,
+// ── STATE ──
+const App = {
+  view: 'home',
+  scanning: false,
+  scanTimer: null,
   settings: {
-    camera:      'rear',
-    delay:       0,
-    haptic:      true,
-    confidence:  95,
-    aesthetic:   'black',
-    practice:    false
+    camera:     'rear',
+    delay:      0,
+    haptic:     true,
+    confidence: 95,
+    aesthetic:  'black',
+    practice:   false
   }
 };
 
-// Practice mode: simulated location pool
-const PRACTICE_LOCATIONS = [
+const MOCK_LOCATIONS = [
   { name: 'Tokyo, Japan',           coords: '35.6762° N, 139.6503° E', conf: 94 },
   { name: 'New York City, USA',     coords: '40.7128° N, 74.0060° W',  conf: 97 },
   { name: 'Paris, France',          coords: '48.8566° N, 2.3522° E',   conf: 91 },
@@ -906,354 +922,267 @@ const PRACTICE_LOCATIONS = [
   { name: 'Mumbai, India',          coords: '19.0760° N, 72.8777° E',  conf: 92 },
 ];
 
-// ─────────────────────────────────────────────
-// VIEW MANAGEMENT — instant switch, no fade
-// ─────────────────────────────────────────────
-
-/**
- * Navigate to a named view instantly.
- * @param {'home'|'settings'|'perform'} viewName
- */
-function navigateTo(viewName) {
-  // Hide all views
+// ── VIEW NAVIGATION ──
+function navigateTo(name) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById(`view-${name}`).classList.add('active');
+  App.view = name;
 
-  // Show target
-  document.getElementById(`view-${viewName}`).classList.add('active');
-  AppState.currentView = viewName;
-
-  // Handle perform-specific setup
-  if (viewName === 'perform') {
-    onEnterPerform();
-  } else {
-    onLeavePerform();
-  }
+  if (name === 'perform') onEnterPerform();
+  else onLeavePerform();
 }
 
-// ─────────────────────────────────────────────
-// PERFORM VIEW — enter / leave
-// ─────────────────────────────────────────────
-
+// ── PERFORM LIFECYCLE ──
 function onEnterPerform() {
-  // Apply aesthetic setting to map container
   const container = document.getElementById('map-container');
-  if (AppState.settings.aesthetic === 'map') {
-    container.classList.add('world-map-aesthetic');
-  } else {
-    container.classList.remove('world-map-aesthetic');
-  }
+  container.classList.toggle('world-map', App.settings.aesthetic === 'map');
 
-  // Reset to standby state
   setPerformState('standby');
 
-  // Practice mode indicators
-  const practiceOn = AppState.settings.practice;
-  document.getElementById('practice-indicator').classList.toggle('show', practiceOn);
-  document.getElementById('gesture-hint').classList.toggle('show', practiceOn);
+  const p = App.settings.practice;
+  document.getElementById('practice-pill').classList.toggle('show', p);
+  document.getElementById('exit-hint').classList.toggle('show', p);
 
-  // ⬛ INJECT HERE: Start camera feed if needed
-  // startCameraFeed(AppState.settings.camera);
-  console.log('[ATLAS] Perform view entered. Camera:', AppState.settings.camera);
+  // ⬛ INJECT HERE: startCameraFeed(App.settings.camera)
+  startSilentAudio(); // Enables volume button detection on iOS
+  console.log('[ATLAS] Perform entered. Camera:', App.settings.camera);
 }
 
 function onLeavePerform() {
-  // Cancel any running scan
   stopScan();
-
-  // ⬛ INJECT HERE: Stop camera feed
-  // stopCameraFeed();
-  console.log('[ATLAS] Perform view exited.');
+  stopSilentAudio();
+  // ⬛ INJECT HERE: stopCameraFeed()
+  console.log('[ATLAS] Perform exited.');
 }
 
-/**
- * Switch between standby / scanning / result states
- * @param {'standby'|'scanning'|'result'} state
- */
 function setPerformState(state) {
-  document.getElementById('perform-standby').classList.toggle('hidden', state !== 'standby');
-  document.getElementById('perform-scanning').classList.toggle('active', state === 'scanning');
-  document.getElementById('perform-result').classList.toggle('active',   state === 'result');
+  document.getElementById('p-standby').classList.toggle('hidden',  state !== 'standby');
+  document.getElementById('p-scanning').classList.toggle('active', state === 'scanning');
+  document.getElementById('p-result').classList.toggle('active',   state === 'result');
 }
 
-// ─────────────────────────────────────────────
-// CORE: startHunterScan()
-// Triggered by Volume Up press in Perform view
-// ─────────────────────────────────────────────
-
-/**
- * Main entry point for a scan attempt.
- * Handles delay timer, then fires the OCR/AI pipeline.
- */
+// ── SCAN ──
 function startHunterScan() {
-  if (AppState.isScanning) return; // Prevent double-trigger
-  AppState.isScanning = true;
+  if (App.scanning) return;
+  App.scanning = true;
 
-  const delay = AppState.settings.delay * 1000;
-
-  console.log(`[ATLAS] startHunterScan() — delay: ${AppState.settings.delay}s, confidence: ${AppState.settings.confidence}%`);
+  const delay = App.settings.delay * 1000;
+  console.log(`[ATLAS] startHunterScan() — delay:${App.settings.delay}s conf:${App.settings.confidence}%`);
 
   if (delay > 0) {
-    // Show standby during countdown, then switch to scanning
     setPerformState('standby');
-    AppState.scanTimer = setTimeout(() => {
-      setPerformState('scanning');
-      executeScan();
-    }, delay);
+    App.scanTimer = setTimeout(() => { setPerformState('scanning'); executeScan(); }, delay);
   } else {
     setPerformState('scanning');
     executeScan();
   }
 }
 
-/**
- * Stop any active scan and reset to standby.
- */
 function stopScan() {
-  if (AppState.scanTimer) {
-    clearTimeout(AppState.scanTimer);
-    AppState.scanTimer = null;
-  }
-  AppState.isScanning = false;
-
-  if (AppState.currentView === 'perform') {
-    setPerformState('standby');
-  }
+  if (App.scanTimer) { clearTimeout(App.scanTimer); App.scanTimer = null; }
+  App.scanning = false;
+  if (App.view === 'perform') setPerformState('standby');
 }
 
-/**
- * The actual scan pipeline. In production, this fires:
- *   1. Camera capture → canvas frame grab
- *   2. Canvas → base64 → OCR API call
- *   3. OCR result → AI location parser
- *   4. Parsed location → Google Maps flyTo reveal
- */
 function executeScan() {
-  console.log('[ATLAS] executeScan() — grabbing camera frame...');
+  console.log('[ATLAS] executeScan() — capturing frame...');
 
-  // ⬛ INJECT HERE: Capture camera frame
-  // const frame = captureFrame(); // grabs from #camera-canvas
+  // ⬛ INJECT HERE: const frame = captureFrame()
+  // ⬛ INJECT HERE: const text  = await callOCRBackend(frame)
+  // ⬛ INJECT HERE: const loc   = await callLocationParser(text, App.settings.confidence)
+  // ⬛ INJECT HERE: mapFlyTo(loc.coords)
+  // ⬛ THEN CALL  : onLocationFound(loc.name, loc.coords, loc.confidence)
 
-  // ⬛ INJECT HERE: Send frame to OCR backend
-  // const ocrText = await callOCRBackend(frame);
-
-  // ⬛ INJECT HERE: Parse OCR text to location
-  // const location = await callLocationParser(ocrText, AppState.settings.confidence);
-
-  // ⬛ INJECT HERE: Fly Google Maps to location
-  // mapFlyTo(location.coords);
-
-  // --- STUB / PRACTICE MODE SIMULATION ---
-  if (AppState.settings.practice) {
-    // Simulate a 2-second "processing" delay then show a fake result
-    const mockTimeout = setTimeout(() => {
-      const pick = PRACTICE_LOCATIONS[Math.floor(Math.random() * PRACTICE_LOCATIONS.length)];
+  if (App.settings.practice) {
+    App.scanTimer = setTimeout(() => {
+      const pick = MOCK_LOCATIONS[Math.floor(Math.random() * MOCK_LOCATIONS.length)];
       onLocationFound(pick.name, pick.coords, pick.conf);
     }, 2200);
-    AppState.scanTimer = mockTimeout;
     return;
   }
 
-  // Production: result will come via callback from the injected API chain
-  // onLocationFound(name, coords, confidence) will be called when ready
-  console.log('[ATLAS] Waiting for OCR + AI result...');
+  console.log('[ATLAS] Awaiting OCR + AI pipeline...');
 }
 
-/**
- * Called when the full pipeline resolves with a location.
- * @param {string} locationName — Human-readable place name
- * @param {string} coords       — Formatted coordinate string
- * @param {number} confidence   — 0-100 confidence score
- */
-function onLocationFound(locationName, coords, confidence) {
-  AppState.isScanning = false;
+function onLocationFound(name, coords, confidence) {
+  App.scanning = false;
+  console.log(`[ATLAS] FOUND: ${name} (${confidence}%)`);
 
-  console.log(`[ATLAS] Location found: ${locationName} (${confidence}% confidence)`);
+  document.getElementById('result-name').textContent   = name;
+  document.getElementById('result-coords').textContent = coords;
+  document.getElementById('conf-val').textContent      = `${confidence}%`;
 
-  // Populate result UI
-  document.getElementById('result-location-text').textContent = locationName;
-  document.getElementById('result-coords-text').textContent   = coords;
-  document.getElementById('result-conf-label').textContent    = `${confidence}%`;
-
-  // Switch to result state
   setPerformState('result');
 
-  // Animate confidence bar
   requestAnimationFrame(() => {
     setTimeout(() => {
-      document.getElementById('result-conf-bar').style.width = `${confidence}%`;
+      document.getElementById('conf-fill').style.width = `${confidence}%`;
     }, 80);
   });
 
-  // Fire haptic feedback
-  if (AppState.settings.haptic) {
-    triggerHapticHit();
-  }
+  if (App.settings.haptic) triggerHapticHit();
 
-  // ⬛ INJECT HERE: Trigger Google Maps flyTo animation
-  // mapFlyTo(coords, { zoom: 14, duration: 2000 });
-
-  console.log('[ATLAS] onLocationFound() complete.');
+  // ⬛ INJECT HERE: mapFlyTo(coords, { zoom:14, duration:2000 })
 }
 
-// ─────────────────────────────────────────────
-// HAPTIC HACK — iOS Safari workaround
-// ─────────────────────────────────────────────
-
-/**
- * Triggers a physical haptic buzz on iOS Safari by toggling
- * the checked state of a hidden checkbox. Apple's Taptic Engine
- * fires on checkbox state change when triggered by user gesture chain.
- *
- * NOTE: Must be called within a gesture/event callback chain to work.
- *       Does NOT work from setTimeout or async context alone on iOS.
- */
+// ── HAPTIC HACK ──
 function triggerHapticHit() {
   const el = document.getElementById('haptic-hack');
   el.checked = !el.checked;
-  console.log('[ATLAS] triggerHapticHit() — checkbox toggled:', el.checked);
+  if (navigator.vibrate) navigator.vibrate([60, 40, 60]);
+  console.log('[ATLAS] triggerHapticHit()');
+}
 
-  // Android fallback
-  if (navigator.vibrate) {
-    navigator.vibrate([60, 40, 60]);
+// ── VOLUME BUTTON TRIGGER — iOS Safari workaround ──
+//
+// iOS blocks keydown for volume buttons entirely.
+// The ONLY reliable method on iOS Safari is:
+//   1. Play a silent looping audio via AudioContext
+//   2. This registers the app as an active audio session
+//   3. iOS then routes volume button presses to MediaSession
+//   4. We handle 'previoustrack' (Vol-) or 'nexttrack' (Vol+)
+//      via the MediaSession API
+//
+// The silent audio must be STARTED by a real user gesture
+// (tap), so we init it on first entry to Perform view.
+
+let silentAudioCtx    = null;
+let silentAudioSource = null;
+let silentAudioStarted = false;
+
+function startSilentAudio() {
+  if (silentAudioStarted) return;
+
+  try {
+    silentAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+    // Create a silent buffer (0.5s, looping)
+    const buf = silentAudioCtx.createBuffer(1, silentAudioCtx.sampleRate * 0.5, silentAudioCtx.sampleRate);
+    // Buffer is silent by default (all zeros)
+
+    silentAudioSource = silentAudioCtx.createBufferSource();
+    silentAudioSource.buffer = buf;
+    silentAudioSource.loop   = true;
+
+    // Connect through a gain node at near-zero volume
+    const gain = silentAudioCtx.createGain();
+    gain.gain.value = 0.001; // Inaudible but active
+
+    silentAudioSource.connect(gain);
+    gain.connect(silentAudioCtx.destination);
+    silentAudioSource.start(0);
+
+    silentAudioStarted = true;
+    console.log('[ATLAS] Silent audio session started — volume buttons now active');
+
+    // Set MediaSession metadata so iOS shows controls
+    if ('mediaSession' in navigator) {
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: 'Atlas Sync',
+        artist: 'Performer Tool',
+        album: ' '
+      });
+
+      // Volume UP → previoustrack on most iOS setups
+      // Volume DOWN → nexttrack
+      // We register BOTH and let the performer use either
+      try {
+        navigator.mediaSession.setActionHandler('previoustrack', () => {
+          if (App.view !== 'perform') return;
+          console.log('[ATLAS] Volume button detected → startHunterScan()');
+          startHunterScan();
+        });
+      } catch(e) {}
+
+      try {
+        navigator.mediaSession.setActionHandler('nexttrack', () => {
+          if (App.view !== 'perform') return;
+          console.log('[ATLAS] Volume button detected → startHunterScan()');
+          startHunterScan();
+        });
+      } catch(e) {}
+    }
+
+  } catch(e) {
+    console.warn('[ATLAS] Silent audio failed:', e);
   }
 }
 
-// ─────────────────────────────────────────────
-// VOLUME BUTTON LISTENER
-// State-scoped: only fires in Perform view
-// ─────────────────────────────────────────────
+function stopSilentAudio() {
+  if (silentAudioSource) {
+    try { silentAudioSource.stop(); } catch(e) {}
+    silentAudioSource = null;
+  }
+  if (silentAudioCtx) {
+    try { silentAudioCtx.close(); } catch(e) {}
+    silentAudioCtx = null;
+  }
+  silentAudioStarted = false;
+  console.log('[ATLAS] Silent audio session stopped');
+}
 
-/**
- * Physical Volume Up button → keydown event.
- * MediaSessionAction 'nexttrack' also catches BT headphone forward button.
- */
-document.addEventListener('keydown', (e) => {
-  // Only respond in Perform view
-  if (AppState.currentView !== 'perform') return;
-
-  // Volume Up: AudioVolumeUp (Android WebView), or ArrowUp fallback for testing
-  if (e.key === 'AudioVolumeUp' || e.key === 'ArrowUp') {
+// Android / desktop keydown fallback
+document.addEventListener('keydown', e => {
+  if (App.view !== 'perform') return;
+  if (e.key === 'AudioVolumeUp' || e.key === 'AudioVolumeDown' || e.key === 'ArrowUp') {
     e.preventDefault();
-    console.log('[ATLAS] Volume Up detected in Perform view → startHunterScan()');
     startHunterScan();
   }
 });
 
-// Also intercept volume via Media Session API (better iOS support)
-if ('mediaSession' in navigator) {
-  try {
-    navigator.mediaSession.setActionHandler('nexttrack', () => {
-      if (AppState.currentView !== 'perform') return;
-      console.log('[ATLAS] Media nexttrack (vol+) in Perform view → startHunterScan()');
-      startHunterScan();
-    });
-  } catch(e) {
-    console.warn('[ATLAS] MediaSession nexttrack not supported:', e);
-  }
-}
+// ── TWO-FINGER SWIPE DOWN → exit perform ──
+(function() {
+  let t0 = [], y0 = 0;
+  const pv = document.getElementById('view-perform');
 
-// ─────────────────────────────────────────────
-// TWO-FINGER SWIPE DOWN — Stealth Exit
-// ─────────────────────────────────────────────
-
-(function initStealthExit() {
-  let touchStart = [];
-  let touchStartY = 0;
-
-  document.getElementById('view-perform').addEventListener('touchstart', (e) => {
-    touchStart = Array.from(e.touches);
-    touchStartY = e.touches[0]?.clientY ?? 0;
+  pv.addEventListener('touchstart', e => {
+    t0 = Array.from(e.touches);
+    y0 = e.touches[0]?.clientY ?? 0;
   }, { passive: true });
 
-  document.getElementById('view-perform').addEventListener('touchend', (e) => {
-    // Require exactly 2 fingers
-    if (touchStart.length !== 2) return;
-
-    const endY = e.changedTouches[0]?.clientY ?? 0;
-    const deltaY = endY - touchStartY;
-
-    // Must swipe DOWN at least 60px
-    if (deltaY > 60) {
-      console.log('[ATLAS] Two-finger swipe down detected → exiting Perform view');
+  pv.addEventListener('touchend', e => {
+    if (t0.length !== 2) return;
+    const dy = (e.changedTouches[0]?.clientY ?? 0) - y0;
+    if (dy > 60) {
+      console.log('[ATLAS] Stealth exit triggered');
       navigateTo('home');
     }
   }, { passive: true });
 })();
 
-// ─────────────────────────────────────────────
-// SETTINGS HANDLERS
-// ─────────────────────────────────────────────
-
-function onDelayChange(val) {
-  AppState.settings.delay = parseInt(val);
-  document.getElementById('delay-display').textContent =
-    val === '0' ? '0s' : `${val}s`;
+// ── SETTINGS ──
+function onDelayChange(v) {
+  App.settings.delay = parseInt(v);
+  document.getElementById('delay-display').textContent = v === '0' ? '0 s' : `${v} s`;
 }
 
-function onAestheticChange(val) {
-  AppState.settings.aesthetic = val;
+function onAestheticChange(v) {
+  App.settings.aesthetic = v;
 }
 
 function onToggle(key) {
-  const idMap = { haptic: 'toggle-haptic', practice: 'toggle-practice' };
-  const stateMap = { haptic: 'haptic', practice: 'practice' };
-
-  AppState.settings[stateMap[key]] = !AppState.settings[stateMap[key]];
-  const isOn = AppState.settings[stateMap[key]];
-
-  document.getElementById(idMap[key]).classList.toggle('on', isOn);
-
+  App.settings[key] = !App.settings[key];
+  const on = App.settings[key];
+  document.getElementById(`toggle-${key}`).classList.toggle('on', on);
   if (key === 'practice') {
-    document.getElementById('practice-banner').classList.toggle('show', isOn);
+    document.getElementById('practice-banner').classList.toggle('show', on);
   }
-
-  console.log(`[ATLAS] Setting "${key}" →`, isOn);
+  console.log(`[ATLAS] ${key}:`, on);
 }
 
-// Sync dropdowns on settings change
-document.getElementById('setting-camera').addEventListener('change', (e) => {
-  AppState.settings.camera = e.target.value;
-  console.log('[ATLAS] Camera setting:', AppState.settings.camera);
+document.getElementById('setting-camera').addEventListener('change', e => {
+  App.settings.camera = e.target.value;
+});
+document.getElementById('setting-confidence').addEventListener('change', e => {
+  App.settings.confidence = parseInt(e.target.value);
 });
 
-document.getElementById('setting-confidence').addEventListener('change', (e) => {
-  AppState.settings.confidence = parseInt(e.target.value);
-  console.log('[ATLAS] Confidence threshold:', AppState.settings.confidence);
-});
+// ── NAV BINDINGS ──
+document.getElementById('btn-perform').addEventListener('click', () => navigateTo('perform'));
+document.getElementById('btn-settings').addEventListener('click', () => navigateTo('settings'));
+document.getElementById('btn-back').addEventListener('click', () => navigateTo('home'));
 
-// ─────────────────────────────────────────────
-// NAVIGATION BINDINGS
-// ─────────────────────────────────────────────
-
-document.getElementById('btn-perform').addEventListener('click', () => {
-  navigateTo('perform');
-});
-
-document.getElementById('btn-settings').addEventListener('click', () => {
-  navigateTo('settings');
-});
-
-document.getElementById('btn-back-settings').addEventListener('click', () => {
-  navigateTo('home');
-});
-
-// ─────────────────────────────────────────────
-// INIT
-// ─────────────────────────────────────────────
-
-console.log('[ATLAS] Atlas Sync v0.1.0 initialized.');
-console.log('[ATLAS] Current view:', AppState.currentView);
-
-/* ─────────────────────────────────────────────
-   FUTURE INJECTION POINTS SUMMARY
-   ─────────────────────────────────────────────
-   startCameraFeed(facingMode)  → opens getUserMedia stream to #camera-feed
-   stopCameraFeed()             → closes all media tracks
-   captureFrame()               → draws #camera-feed to #camera-canvas, returns ImageData
-   callOCRBackend(frame)        → POSTs base64 frame to OCR API, returns raw text
-   callLocationParser(text, threshold) → AI parses text to {name, coords, confidence}
-   mapFlyTo(coords, options)    → Google Maps / Mapbox animateTo call
-   ───────────────────────────────────────────── */
+console.log('[ATLAS] v0.1.0 ready.');
 </script>
 </body>
 </html>
