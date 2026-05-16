@@ -5,36 +5,274 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Atlas Sync">
-<title>ATLAS SYNC</title>
+<title>ATLAS</title>
+
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Space+Mono:wght@400;700&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Space+Mono:wght@400;700&display=swap');
 
-/* ══════════════════════════════════
-   TOKENS
-══════════════════════════════════ */
-:root {
-  --bg:       #080808;
-  --surface:  #111111;
-  --surface2: #161616;
-  --border:   #1e1e1e;
-  --border2:  #252525;
-  --accent:   #c8ff00;
-  --accent2:  #3caaff;
-  --text:     #f0f0f0;
-  --muted:    #505050;
-  --danger:   #ff3c3c;
-  --warn:     #ffaa00;
-  --sans:     'Syne', sans-serif;
-  --mono:     'Space Mono', monospace;
-}
+  :root {
+    --bg: #000000; 
+    --stealth-text: #2a2a2a; 
+    --stealth-active: #555555; 
+    --accent: #c8ff00;
+    --muted: #555555;
+    --border: #222222;
+  }
 
-/* ══════════════════════════════════
-   RESET
-══════════════════════════════════ */
-*, *::before, *::after {
-  margin: 0; padding: 0;
-  box-sizing: border-box;
+  *, *::before, *::after {
+    margin: 0; padding: 0;
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+    user-select: none;
+  }
+
+  html, body {
+    width: 100%; height: 100%;
+    background-color: var(--bg);
+    overflow: hidden;
+    touch-action: none; 
+    font-family: 'Space Mono', monospace;
+  }
+
+  /* View Containers */
+  .view {
+    position: absolute; top: 0; left: 0;
+    width: 100%; height: 100%;
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background: var(--bg);
+    z-index: 10;
+  }
+  .view.active { display: flex; }
+
+  /* UI Elements */
+  .menu-container { display: flex; flex-direction: column; gap: 50px; }
+  
+  .stealth-btn {
+    background: transparent; border: none;
+    color: var(--stealth-text);
+    font-family: 'Space Mono', monospace;
+    font-size: 14px; font-weight: 700;
+    letter-spacing: 6px; padding: 20px 40px;
+    cursor: pointer; transition: color 0.1s ease;
+  }
+  .stealth-btn:active { color: var(--stealth-active); }
+  
+  .view-title {
+    color: var(--stealth-active); font-size: 10px;
+    letter-spacing: 4px; margin-bottom: 30px;
+  }
+
+  /* Perform Mode UI */
+  #btn-scan {
+    border: 1px solid var(--border); 
+    color: var(--stealth-active);
+    border-radius: 4px;
+    margin-bottom: 20px;
+  }
+  #btn-scan:active {
+    color: var(--accent);
+    border-color: var(--accent);
+  }
+
+  #scan-status {
+    color: var(--muted); 
+    font-size: 10px; 
+    letter-spacing: 2px;
+  }
+
+  /* Hidden Utilities */
+  .hidden { display: none !important; opacity: 0; pointer-events: none; }
+</style>
+</head>
+<body>
+
+  <div id="view-home" class="view active">
+    <div class="menu-container">
+      <button class="stealth-btn" id="btn-start-perform">[ PERFORM ]</button>
+      <button class="stealth-btn" onclick="switchView('view-settings')">[ SETTINGS ]</button>
+    </div>
+  </div>
+
+  <div id="view-settings" class="view">
+    <div class="view-title">SETTINGS VAULT</div>
+    <button class="stealth-btn" onclick="switchView('view-home')">[ BACK ]</button>
+  </div>
+
+  <div id="view-perform" class="view">
+    <div class="view-title">ATLAS TERMINAL</div>
+    
+    <button id="btn-scan" class="stealth-btn">
+      [ INITIATE SCAN ]
+    </button>
+    
+    <div id="scan-status">SYSTEM STANDBY</div>
+  </div>
+
+  <audio id="stealth-audio" src="data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA" loop playsinline class="hidden"></audio>
+  
+  <video id="hidden-video" class="hidden" autoplay playsinline></video>
+  <canvas id="hidden-canvas" class="hidden"></canvas>
+  <input type="checkbox" id="haptic-hack" class="hidden">
+
+  <script>
+    // --- APP STATE ---
+    let isHunting = false;
+    let videoStream = null;
+
+    // --- NAVIGATION LOGIC ---
+    function switchView(viewId) {
+      document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+      document.getElementById(viewId).classList.add('active');
+    }
+
+    document.getElementById('btn-start-perform').addEventListener('click', () => {
+      switchView('view-perform');
+      document.getElementById('scan-status').textContent = "SYSTEM STANDBY";
+      
+      // Arm the Silent Audio Hack for Volume Buttons
+      const stealthAudio = document.getElementById('stealth-audio');
+      stealthAudio.volume = 0.5;
+      stealthAudio.play().catch(e => console.log('Audio autoplay blocked, requires tap.', e));
+    });
+
+    // --- STEALTH EXIT (Two Finger Swipe Down) ---
+    let touchStartY = 0;
+    let isTwoFingerSwipe = false;
+
+    document.addEventListener('touchstart', (e) => {
+      if (e.touches.length === 2 && document.getElementById('view-perform').classList.contains('active')) {
+        isTwoFingerSwipe = true;
+        touchStartY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+      } else {
+        isTwoFingerSwipe = false;
+      }
+    });
+
+    document.addEventListener('touchend', (e) => {
+      if (isTwoFingerSwipe) {
+        // Exit triggered
+        document.getElementById('stealth-audio').pause(); // Kill silent audio
+        switchView('view-home');
+        isTwoFingerSwipe = false;
+      }
+    });
+
+    // --- THE LIVE HUNTER (OCR & Redirect) ---
+    const video = document.getElementById('hidden-video');
+    const canvas = document.getElementById('hidden-canvas');
+    const ctx = canvas.getContext('2d');
+    const statusText = document.getElementById('scan-status');
+
+    // Trigger 1: On-Screen Button
+    document.getElementById('btn-scan').addEventListener('click', executeSingleScan);
+
+    // Trigger 2: Physical Volume Buttons (The Audio Hack)
+    document.getElementById('stealth-audio').addEventListener('volumechange', () => {
+      if (document.getElementById('view-perform').classList.contains('active') && !isHunting) {
+        executeSingleScan();
+      }
+    });
+
+    // Trigger 3: Bluetooth Clicker (Sends Enter Key)
+    window.addEventListener('keydown', e => {
+      if (document.getElementById('view-perform').classList.contains('active') && e.key === 'Enter') {
+        executeSingleScan();
+      }
+    });
+
+    async function executeSingleScan() {
+      if (isHunting) return;
+      isHunting = true;
+      statusText.textContent = "ACTIVATING CAMERA...";
+      statusText.style.color = "var(--accent)";
+
+      try {
+        // Wake up rear camera
+        videoStream = await navigator.mediaDevices.getUserMedia({ 
+          video: { facingMode: 'environment', width: { ideal: 1080 } } 
+        });
+        video.srcObject = videoStream;
+        
+        // Wait 1.5 seconds for auto-focus to stabilize
+        setTimeout(captureAndRead, 1500);
+
+      } catch (err) {
+        statusText.textContent = "CAMERA ERROR";
+        statusText.style.color = "red";
+        console.error(err);
+        isHunting = false;
+      }
+    }
+
+    async function captureAndRead() {
+      statusText.textContent = "ANALYZING TARGET...";
+
+      // Draw frame to hidden canvas
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      
+      // Stop the camera instantly to save battery
+      if(videoStream) {
+        videoStream.getTracks().forEach(track => track.stop());
+      }
+
+      // Run Free Browser OCR (Tesseract)
+      try {
+        const result = await Tesseract.recognize(canvas, 'eng');
+        let detectedText = result.data.text.trim();
+        
+        // Ensure we grabbed actual text
+        if (detectedText.length > 2) {
+           statusText.textContent = "LOCATION ACQUIRED";
+           triggerHaptic(); 
+           
+           // Small delay so you can feel the buzz before it redirects
+           setTimeout(() => { redirectToMaps(detectedText); }, 500);
+        } else {
+           statusText.textContent = "SCAN FAILED. RETRY.";
+           statusText.style.color = "var(--muted)";
+           isHunting = false;
+        }
+
+      } catch (error) {
+        statusText.textContent = "OCR ERROR";
+        isHunting = false;
+      }
+    }
+
+    function triggerHaptic() {
+      // The iOS Checkbox Hack
+      const hapticCheckbox = document.getElementById('haptic-hack');
+      hapticCheckbox.checked = !hapticCheckbox.checked;
+      // Fallback for Android
+      if (navigator.vibrate) navigator.vibrate([100, 50, 100]); 
+    }
+
+    function redirectToMaps(scannedText) {
+      // Clean up messy OCR text by removing line breaks
+      let cleanQuery = scannedText.replace(/\n/g, ' ').trim();
+      
+      // URL encode it (e.g. "Shinjuku Station" -> "Shinjuku%20Station")
+      let urlEncodedQuery = encodeURIComponent(cleanQuery);
+
+      // Redirect directly to Native Google Maps
+      window.location.href = `https://maps.google.com/?q=${urlEncodedQuery}`;
+      
+      // Reset state so it's ready next time you open the app
+      isHunting = false;
+      statusText.textContent = "SYSTEM STANDBY";
+      statusText.style.color = "var(--muted)";
+    }
+  </script>
+</body>
+</html>  box-sizing: border-box;
   -webkit-tap-highlight-color: transparent;
   -webkit-touch-callout: none;
   user-select: none;
