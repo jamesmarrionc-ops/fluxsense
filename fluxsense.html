@@ -1,0 +1,1196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>FLUXSENSE</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Space+Mono:wght@400;700&display=swap');
+
+  :root {
+    --bg: #080808;
+    --surface: #111111;
+    --surface2: #1a1a1a;
+    --border: #222222;
+    --accent: #c8ff00;
+    --accent3: #3caaff;
+    --text: #f0f0f0;
+    --muted: #555555;
+    --danger: #ff3c3c;
+    --warn: #ffaa00;
+  }
+
+  *, *::before, *::after {
+    margin: 0; padding: 0;
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+    user-select: none;
+  }
+
+  html {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+  }
+
+  body {
+    width: 100%;
+    max-width: 100vw;
+    height: 100%;
+    overflow: hidden;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  /* ── SCREENS ── */
+  .screen {
+    display: none;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    inset: 0;
+  }
+  .screen.active { display: flex; }
+
+  /* ── BOOT ── */
+  #screen-boot {
+    align-items: center;
+    justify-content: center;
+    padding: 40px 28px;
+    gap: 0;
+  }
+
+  .boot-logo {
+    font-size: clamp(36px, 10vw, 52px);
+    font-weight: 800;
+    letter-spacing: -2px;
+    line-height: 1;
+    animation: fadeUp 0.7s cubic-bezier(0.16,1,0.3,1) both;
+  }
+  .boot-logo span { color: var(--accent); }
+
+  .boot-tagline {
+    font-family: 'Space Mono', monospace;
+    font-size: clamp(8px, 2vw, 9px);
+    letter-spacing: 3px;
+    color: var(--muted);
+    margin-top: 10px;
+    text-transform: uppercase;
+    text-align: center;
+    animation: fadeUp 0.7s 0.12s cubic-bezier(0.16,1,0.3,1) both;
+  }
+
+  .boot-btn {
+    margin-top: 52px;
+    padding: 17px 0;
+    background: var(--accent);
+    color: #000;
+    border: none;
+    font-family: 'Syne', sans-serif;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    cursor: pointer;
+    animation: fadeUp 0.7s 0.24s cubic-bezier(0.16,1,0.3,1) both;
+    width: min(100%, 260px);
+    transition: opacity 0.15s;
+  }
+  .boot-btn:active { opacity: 0.75; }
+
+  .boot-note {
+    position: absolute;
+    bottom: max(28px, env(safe-area-inset-bottom, 20px));
+    font-family: 'Space Mono', monospace;
+    font-size: 8px;
+    color: var(--muted);
+    letter-spacing: 1px;
+    text-align: center;
+    padding: 0 28px;
+    line-height: 2;
+    animation: fadeUp 0.7s 0.36s cubic-bezier(0.16,1,0.3,1) both;
+  }
+
+  /* ── MAIN ── */
+  #screen-main {
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .topbar {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 20px;
+    padding-top: max(14px, env(safe-area-inset-top, 14px));
+    border-bottom: 1px solid var(--border);
+    background: var(--bg);
+    width: 100%;
+  }
+
+  .topbar-logo { font-size: 15px; font-weight: 800; letter-spacing: -0.5px; }
+  .topbar-logo span { color: var(--accent); }
+
+  .topbar-status {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: 'Space Mono', monospace;
+    font-size: 9px;
+    color: var(--muted);
+    letter-spacing: 1px;
+  }
+
+  .status-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--muted);
+    flex-shrink: 0;
+    transition: background 0.3s;
+  }
+  .status-dot.active { background: var(--accent); animation: pulse 1.2s infinite; }
+  .status-dot.alert  { background: var(--danger);  animation: pulse 0.35s infinite; }
+
+  .tabs {
+    flex-shrink: 0;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    border-bottom: 1px solid var(--border);
+    width: 100%;
+  }
+
+  .tab {
+    padding: 12px 0;
+    text-align: center;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: color 0.2s, border-color 0.2s;
+  }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  .tab-content {
+    display: none;
+    flex-direction: column;
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    width: 100%;
+  }
+  .tab-content.active { display: flex; }
+
+  .inner-pad {
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding-bottom: max(24px, env(safe-area-inset-bottom, 24px));
+  }
+
+  /* ── METER CARD ── */
+  .meter-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 20px 18px 16px;
+  }
+
+  .card-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 8px;
+    letter-spacing: 3px;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 14px;
+  }
+
+  /* SVG GAUGE */
+  .gauge-wrap {
+    display: flex;
+    justify-content: center;
+  }
+
+  .gauge-svg {
+    width: 100%;
+    max-width: 200px;
+    overflow: visible;
+  }
+
+  .gauge-track { fill: none; stroke: var(--border); stroke-width: 10; }
+  .gauge-fill  {
+    fill: none;
+    stroke: var(--accent);
+    stroke-width: 10;
+    stroke-linecap: round;
+    transition: stroke-dashoffset 0.12s linear, stroke 0.2s;
+  }
+  .gauge-num {
+    font-family: 'Syne', sans-serif;
+    font-size: 22px;
+    font-weight: 800;
+    fill: var(--text);
+    text-anchor: middle;
+    dominant-baseline: middle;
+  }
+  .gauge-sub {
+    font-family: 'Space Mono', monospace;
+    font-size: 7px;
+    fill: var(--muted);
+    text-anchor: middle;
+    dominant-baseline: middle;
+    letter-spacing: 2px;
+  }
+
+  /* BARS */
+  .field-bars {
+    display: flex;
+    gap: 3px;
+    align-items: flex-end;
+    height: 32px;
+    margin-top: 10px;
+  }
+  .field-bar {
+    flex: 1;
+    background: var(--border);
+    border-radius: 2px;
+    min-height: 3px;
+    transition: height 0.1s;
+  }
+
+  /* XYZ */
+  .xyz-row {
+    display: grid;
+    grid-template-columns: repeat(3,1fr);
+    gap: 8px;
+  }
+
+  .xyz-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 11px 10px;
+    text-align: center;
+  }
+
+  .xyz-axis {
+    font-family: 'Space Mono', monospace;
+    font-size: 8px;
+    color: var(--muted);
+    letter-spacing: 2px;
+    margin-bottom: 5px;
+  }
+
+  .xyz-val {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+  }
+
+  /* TRIGGER */
+  .trigger-alert {
+    background: rgba(200,255,0,0.07);
+    border: 1px solid var(--accent);
+    padding: 13px 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    opacity: 0;
+    transform: translateY(4px);
+    transition: opacity 0.2s, transform 0.2s;
+  }
+  .trigger-alert.visible { opacity: 1; transform: none; }
+
+  .trigger-dot {
+    width: 9px; height: 9px;
+    border-radius: 50%;
+    background: var(--accent);
+    flex-shrink: 0;
+    animation: pulse 0.5s infinite;
+  }
+
+  .trigger-text {
+    font-family: 'Space Mono', monospace;
+    font-size: 9px;
+    color: var(--accent);
+    letter-spacing: 1px;
+  }
+
+  /* BTN */
+  .main-btn {
+    padding: 17px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    transition: all 0.2s;
+    width: 100%;
+  }
+  .main-btn.running { border-color: var(--accent); color: var(--accent); }
+  .main-btn:active { opacity: 0.7; }
+
+  .pulse-ring {
+    width: 13px; height: 13px;
+    border: 2px solid currentColor;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .running .pulse-ring { animation: sonar 1s infinite; }
+
+  /* PERM */
+  .perm-card {
+    background: rgba(255,170,0,0.05);
+    border: 1px solid var(--warn);
+    padding: 14px;
+  }
+  .perm-text {
+    font-family: 'Space Mono', monospace;
+    font-size: 9px;
+    color: var(--warn);
+    line-height: 2;
+    letter-spacing: 0.5px;
+    margin-bottom: 12px;
+  }
+  .perm-btn {
+    padding: 12px;
+    background: var(--warn);
+    color: #000;
+    border: none;
+    font-family: 'Syne', sans-serif;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    cursor: pointer;
+    width: 100%;
+  }
+
+  /* ── CONFIG TAB ── */
+  .s-section-title {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+
+  .s-row {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 13px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 6px;
+  }
+
+  .s-row-info { flex: 1; min-width: 0; }
+  .s-row-label { font-size: 13px; font-weight: 600; }
+  .s-row-sub { font-family: 'Space Mono', monospace; font-size: 8px; color: var(--muted); margin-top: 3px; letter-spacing: 0.5px; }
+
+  .slider-group {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 13px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 6px;
+  }
+
+  .slider-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .slider-val {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: 1px;
+    white-space: nowrap;
+  }
+
+  input[type=range] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 3px;
+    background: var(--border);
+    outline: none;
+    border-radius: 2px;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+    border: 3px solid var(--bg);
+    box-shadow: 0 0 0 1px var(--accent);
+  }
+
+  .toggle {
+    width: 42px; height: 23px;
+    background: var(--border);
+    border-radius: 12px;
+    position: relative;
+    cursor: pointer;
+    transition: background 0.2s;
+    flex-shrink: 0;
+  }
+  .toggle.on { background: var(--accent); }
+  .toggle-thumb {
+    position: absolute;
+    top: 3px; left: 3px;
+    width: 17px; height: 17px;
+    background: #fff;
+    border-radius: 50%;
+    transition: transform 0.2s;
+  }
+  .toggle.on .toggle-thumb { transform: translateX(19px); }
+
+  .pattern-grid {
+    display: grid;
+    grid-template-columns: repeat(2,1fr);
+    gap: 7px;
+  }
+
+  .pattern-btn {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-family: 'Syne', sans-serif;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    padding: 13px 8px;
+    cursor: pointer;
+    text-align: center;
+    text-transform: uppercase;
+    transition: all 0.15s;
+  }
+  .pattern-btn.active { border-color: var(--accent); color: var(--accent); background: rgba(200,255,0,0.04); }
+  .pattern-btn:active { opacity: 0.7; }
+
+  /* ── CALIBRATE ── */
+  .info-box {
+    background: rgba(60,170,255,0.05);
+    border: 1px solid rgba(60,170,255,0.2);
+    padding: 13px;
+  }
+  .info-text {
+    font-family: 'Space Mono', monospace;
+    font-size: 8px;
+    color: var(--accent3);
+    line-height: 2;
+    letter-spacing: 0.5px;
+  }
+
+  .cal-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 16px;
+  }
+  .cal-title {
+    font-family: 'Space Mono', monospace;
+    font-size: 8px;
+    letter-spacing: 3px;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  .baseline-num {
+    font-family: 'Space Mono', monospace;
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--accent);
+    letter-spacing: 2px;
+  }
+  .baseline-unit {
+    font-family: 'Space Mono', monospace;
+    font-size: 9px;
+    color: var(--muted);
+    letter-spacing: 2px;
+    margin-top: 3px;
+  }
+
+  .cal-btn {
+    width: 100%;
+    padding: 15px;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+  .cal-btn.accent { background: var(--accent); color: #000; border-color: var(--accent); }
+  .cal-btn:active { opacity: 0.7; }
+
+  /* FLASH */
+  .flash-overlay {
+    position: fixed; inset: 0;
+    background: var(--accent);
+    opacity: 0;
+    pointer-events: none;
+    z-index: 9998;
+    transition: opacity 0.04s;
+  }
+  .flash-overlay.on { opacity: 0.18; }
+
+  /* ANIMATIONS */
+  @keyframes fadeUp {
+    from { opacity:0; transform:translateY(14px); }
+    to   { opacity:1; transform:translateY(0); }
+  }
+  @keyframes pulse {
+    0%,100% { opacity:1; } 50% { opacity:0.25; }
+  }
+  @keyframes sonar {
+    0%   { box-shadow: 0 0 0 0 rgba(200,255,0,0.5); }
+    100% { box-shadow: 0 0 0 9px rgba(200,255,0,0); }
+  }
+
+  ::-webkit-scrollbar { width: 2px; }
+  ::-webkit-scrollbar-thumb { background: var(--border); }
+</style>
+</head>
+<body>
+
+<div class="flash-overlay" id="flash"></div>
+
+<!-- BOOT -->
+<div id="screen-boot" class="screen active">
+  <div class="boot-logo">FLUX<span>S</span>ENSE</div>
+  <div class="boot-tagline">Magnetic Field Detector · Performer Tool</div>
+  <button class="boot-btn" onclick="initApp()">INITIALIZE</button>
+  <div class="boot-note">
+    REQUIRES MOTION SENSOR PERMISSION<br>
+    KEEP SCREEN PRIVATE DURING USE
+  </div>
+</div>
+
+<!-- MAIN -->
+<div id="screen-main" class="screen">
+
+  <div class="topbar">
+    <div class="topbar-logo">FLUX<span>S</span>ENSE</div>
+    <div class="topbar-status">
+      <div class="status-dot" id="status-dot"></div>
+      <span id="status-text">IDLE</span>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab('detect')">DETECT</div>
+    <div class="tab" onclick="switchTab('config')">CONFIG</div>
+    <div class="tab" onclick="switchTab('calibrate')">CALIBRATE</div>
+  </div>
+
+  <!-- DETECT -->
+  <div class="tab-content active" id="tab-detect">
+    <div class="inner-pad">
+
+      <div id="perm-prompt" class="perm-card" style="display:none">
+        <div class="perm-text">
+          IOS REQUIRES A TAP TO ENABLE<br>
+          MOTION &amp; ORIENTATION SENSORS.
+        </div>
+        <button class="perm-btn" onclick="requestPermission()">GRANT SENSOR ACCESS</button>
+      </div>
+
+      <!-- GAUGE -->
+      <div class="meter-card">
+        <div class="card-label">Magnetic Field Strength</div>
+        <div class="gauge-wrap">
+          <svg class="gauge-svg" viewBox="0 0 180 110">
+            <!-- semicircle arc r=72 cx=90 cy=95 -->
+            <path class="gauge-track"
+              d="M 18 95 A 72 72 0 0 1 162 95"/>
+            <path class="gauge-fill" id="gauge-fill"
+              d="M 18 95 A 72 72 0 0 1 162 95"
+              stroke-dasharray="226"
+              stroke-dashoffset="226"/>
+            <text class="gauge-num" x="90" y="80" id="gauge-num">0</text>
+            <text class="gauge-sub" x="90" y="96">μT DELTA</text>
+          </svg>
+        </div>
+        <div class="field-bars" id="field-bars"></div>
+      </div>
+
+      <!-- XYZ -->
+      <div class="xyz-row">
+        <div class="xyz-card">
+          <div class="xyz-axis">X</div>
+          <div class="xyz-val" id="val-x">—</div>
+        </div>
+        <div class="xyz-card">
+          <div class="xyz-axis">Y</div>
+          <div class="xyz-val" id="val-y">—</div>
+        </div>
+        <div class="xyz-card">
+          <div class="xyz-axis">Z</div>
+          <div class="xyz-val" id="val-z">—</div>
+        </div>
+      </div>
+
+      <!-- TRIGGER -->
+      <div class="trigger-alert" id="trigger-alert">
+        <div class="trigger-dot"></div>
+        <div class="trigger-text" id="trigger-text">FIELD DETECTED</div>
+      </div>
+
+      <!-- START -->
+      <button class="main-btn" id="start-btn" onclick="toggleDetection()">
+        <div class="pulse-ring"></div>
+        <span id="start-btn-text">BEGIN DETECTION</span>
+      </button>
+
+    </div>
+  </div>
+
+  <!-- CONFIG -->
+  <div class="tab-content" id="tab-config">
+    <div class="inner-pad">
+
+      <div>
+        <div class="s-section-title">Detection Threshold</div>
+        <div class="slider-group">
+          <div class="slider-header">
+            <div class="s-row-info">
+              <div class="s-row-label">Trigger Strength</div>
+              <div class="s-row-sub">Field delta above baseline (μT)</div>
+            </div>
+            <div class="slider-val" id="thresh-val">25 μT</div>
+          </div>
+          <input type="range" min="3" max="150" value="25" id="thresh-slider"
+            oninput="updateThreshold(this.value)">
+        </div>
+      </div>
+
+      <div>
+        <div class="s-section-title">Audio Haptic (iOS)</div>
+
+        <div class="s-row">
+          <div class="s-row-info">
+            <div class="s-row-label">Audio Haptic</div>
+            <div class="s-row-sub">Low-freq tone felt through phone body</div>
+          </div>
+          <div class="toggle on" id="toggle-haptic" onclick="toggleOpt('haptic')">
+            <div class="toggle-thumb"></div>
+          </div>
+        </div>
+
+        <div class="slider-group">
+          <div class="slider-header">
+            <div class="s-row-info">
+              <div class="s-row-label">Intensity</div>
+              <div class="s-row-sub">Louder = stronger feel</div>
+            </div>
+            <div class="slider-val" id="haptic-int-val">70%</div>
+          </div>
+          <input type="range" min="0" max="100" value="70" id="haptic-int-slider"
+            oninput="updateHapticInt(this.value)">
+        </div>
+
+        <div class="slider-group">
+          <div class="slider-header">
+            <div class="s-row-info">
+              <div class="s-row-label">Frequency</div>
+              <div class="s-row-sub">Lower Hz = more physical vibration</div>
+            </div>
+            <div class="slider-val" id="haptic-freq-val">55 Hz</div>
+          </div>
+          <input type="range" min="20" max="180" value="55" id="haptic-freq-slider"
+            oninput="updateHapticFreq(this.value)">
+        </div>
+
+        <div class="s-row">
+          <div class="s-row-info">
+            <div class="s-row-label">Native Vibration</div>
+            <div class="s-row-sub">Android · ignored on iOS</div>
+          </div>
+          <div class="toggle on" id="toggle-vibrate" onclick="toggleOpt('vibrate')">
+            <div class="toggle-thumb"></div>
+          </div>
+        </div>
+
+        <div class="s-row">
+          <div class="s-row-info">
+            <div class="s-row-label">Screen Flash</div>
+            <div class="s-row-sub">Visual pulse on trigger</div>
+          </div>
+          <div class="toggle on" id="toggle-flash" onclick="toggleOpt('flash')">
+            <div class="toggle-thumb"></div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="s-section-title">Haptic Pattern</div>
+        <div class="pattern-grid">
+          <button class="pattern-btn active" onclick="setPattern('single')" id="pat-single">SINGLE</button>
+          <button class="pattern-btn" onclick="setPattern('double')" id="pat-double">DOUBLE</button>
+          <button class="pattern-btn" onclick="setPattern('long')" id="pat-long">LONG</button>
+          <button class="pattern-btn" onclick="setPattern('pulse')" id="pat-pulse">PULSE</button>
+        </div>
+      </div>
+
+      <div>
+        <div class="s-section-title">Retrigger Cooldown</div>
+        <div class="slider-group">
+          <div class="slider-header">
+            <div class="s-row-info">
+              <div class="s-row-label">Cooldown</div>
+              <div class="s-row-sub">Min time between triggers</div>
+            </div>
+            <div class="slider-val" id="cooldown-val">1.5 s</div>
+          </div>
+          <input type="range" min="300" max="6000" step="100" value="1500" id="cooldown-slider"
+            oninput="updateCooldown(this.value)">
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- CALIBRATE -->
+  <div class="tab-content" id="tab-calibrate">
+    <div class="inner-pad">
+
+      <div class="info-box">
+        <div class="info-text">
+          SET YOUR AMBIENT BASELINE BEFORE PERFORMANCE.<br>
+          PLACE PHONE IN PERFORMANCE POSITION THEN<br>
+          TAP CALIBRATE. REMOVES AMBIENT INTERFERENCE.
+        </div>
+      </div>
+
+      <div class="cal-card">
+        <div class="cal-title">Baseline</div>
+        <div class="baseline-num" id="baseline-num">—</div>
+        <div class="baseline-unit">μT · AMBIENT</div>
+      </div>
+
+      <div class="cal-card">
+        <div class="cal-title">Live Reading</div>
+        <div class="baseline-num" id="live-num">—</div>
+        <div class="baseline-unit">μT · NOW</div>
+      </div>
+
+      <button class="cal-btn accent" onclick="calibrate()">⊙ CALIBRATE NOW</button>
+      <button class="cal-btn" onclick="resetCal()" style="margin-top:6px;">RESET</button>
+
+      <div class="cal-card">
+        <div class="cal-title">History</div>
+        <div id="cal-history" style="font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);line-height:2.2;letter-spacing:1px;">
+          No calibrations yet.
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ── CONFIG ──
+const cfg = {
+  threshold: 25,
+  hapticOn: true,
+  vibrateOn: true,
+  flashOn: true,
+  hapticInt: 0.7,
+  hapticFreq: 55,
+  pattern: 'single',
+  cooldown: 1500
+};
+
+// ── STATE ──
+const S = {
+  running: false,
+  baseline: null,
+  lastTrigger: 0,
+  calHistory: [],
+  field: 0,
+  xyz: {x:0,y:0,z:0},
+  audioCtx: null,
+  fieldHistory: [],
+  compassHistory: [],
+  demoLoop: null,
+  magSensor: null,
+  sensorMode: 'none'
+};
+
+// ── BOOT ──
+function initApp() {
+  document.getElementById('screen-boot').classList.remove('active');
+  document.getElementById('screen-main').classList.add('active');
+  detectSensor();
+  initAudio();
+  keepAwake();
+}
+
+// ── SENSOR DETECT ──
+function detectSensor() {
+  if (typeof Magnetometer !== 'undefined') {
+    S.sensorMode = 'magnetometer';
+  } else if (typeof DeviceOrientationEvent !== 'undefined') {
+    S.sensorMode = 'orientation';
+    if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+      document.getElementById('perm-prompt').style.display = 'block';
+    }
+  } else {
+    S.sensorMode = 'demo';
+  }
+}
+
+async function requestPermission() {
+  try {
+    if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+      const r = await DeviceOrientationEvent.requestPermission();
+      if (r === 'granted') {
+        document.getElementById('perm-prompt').style.display = 'none';
+        toast('Sensor access granted');
+      }
+    }
+    if (typeof DeviceMotionEvent !== 'undefined' &&
+        typeof DeviceMotionEvent.requestPermission === 'function') {
+      await DeviceMotionEvent.requestPermission();
+    }
+    initAudio();
+  } catch(e) { toast('Permission error'); }
+}
+
+// ── AUDIO ──
+function initAudio() {
+  try {
+    if (!S.audioCtx) {
+      S.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+  } catch(e) {}
+}
+
+function resumeAudio() {
+  if (S.audioCtx && S.audioCtx.state === 'suspended') S.audioCtx.resume();
+}
+
+function playHaptic() {
+  if (!cfg.hapticOn || !S.audioCtx) return;
+  resumeAudio();
+
+  const seqs = {
+    single: [{d:0.09, t:0}],
+    double: [{d:0.06, t:0},{d:0.06, t:0.13}],
+    long:   [{d:0.32, t:0}],
+    pulse:  [{d:0.05,t:0},{d:0.05,t:0.1},{d:0.05,t:0.2},{d:0.05,t:0.3}]
+  };
+
+  const now = S.audioCtx.currentTime;
+  (seqs[cfg.pattern] || seqs.single).forEach(({d, t}) => {
+    const osc  = S.audioCtx.createOscillator();
+    const gain = S.audioCtx.createGain();
+    osc.type = 'sine';
+    osc.frequency.value = cfg.hapticFreq;
+    gain.gain.setValueAtTime(0, now + t);
+    gain.gain.linearRampToValueAtTime(cfg.hapticInt, now + t + 0.01);
+    gain.gain.linearRampToValueAtTime(0, now + t + d);
+    osc.connect(gain);
+    gain.connect(S.audioCtx.destination);
+    osc.start(now + t);
+    osc.stop(now + t + d + 0.02);
+  });
+}
+
+function nativeVibrate() {
+  if (!cfg.vibrateOn || !navigator.vibrate) return;
+  const p = {single:[80],double:[60,80,60],long:[300],pulse:[50,60,50,60,50,60,50]};
+  navigator.vibrate(p[cfg.pattern] || [80]);
+}
+
+function triggerFeedback() {
+  playHaptic();
+  nativeVibrate();
+  if (cfg.flashOn) {
+    const f = document.getElementById('flash');
+    f.classList.add('on');
+    setTimeout(() => f.classList.remove('on'), 100);
+  }
+}
+
+// ── DETECTION ──
+function toggleDetection() {
+  S.running ? stopDetection() : startDetection();
+}
+
+function startDetection() {
+  initAudio(); resumeAudio();
+  S.running = true;
+  updateStatusUI(true);
+
+  if (S.sensorMode === 'magnetometer') startMagnetometer();
+  else if (S.sensorMode === 'orientation') startOrientation();
+  else startDemo();
+}
+
+function stopDetection() {
+  S.running = false;
+  updateStatusUI(false);
+  if (S.magSensor) { try { S.magSensor.stop(); } catch(e) {} S.magSensor = null; }
+  window.removeEventListener('deviceorientation', onOrientation, true);
+  if (S.demoLoop) { clearInterval(S.demoLoop); S.demoLoop = null; }
+  document.getElementById('trigger-alert').classList.remove('visible');
+}
+
+function startMagnetometer() {
+  try {
+    S.magSensor = new Magnetometer({ frequency: 25 });
+    S.magSensor.addEventListener('reading', () => {
+      const {x,y,z} = S.magSensor;
+      process(Math.sqrt(x*x+y*y+z*z), x, y, z);
+    });
+    S.magSensor.addEventListener('error', () => { S.sensorMode='orientation'; startOrientation(); });
+    S.magSensor.start();
+  } catch(e) { S.sensorMode='orientation'; startOrientation(); }
+}
+
+function startOrientation() {
+  window.addEventListener('deviceorientation', onOrientation, true);
+}
+
+function onOrientation(e) {
+  if (!S.running) return;
+  const h = e.webkitCompassHeading || 0;
+  const a = e.alpha || 0, b = e.beta || 0, g = e.gamma || 0;
+
+  S.compassHistory.push(h);
+  if (S.compassHistory.length > 6) S.compassHistory.shift();
+
+  let delta = 0;
+  if (S.compassHistory.length >= 2) {
+    let sum = 0;
+    for (let i = 1; i < S.compassHistory.length; i++) {
+      let d = Math.abs(S.compassHistory[i] - S.compassHistory[i-1]);
+      if (d > 180) d = 360 - d;
+      sum += d;
+    }
+    delta = sum / (S.compassHistory.length - 1);
+  }
+
+  const pseudo = Math.min(delta * 2.8, 300);
+  process(pseudo, a, b, g);
+}
+
+let demoT = 0;
+function startDemo() {
+  S.demoLoop = setInterval(() => {
+    demoT += 0.08;
+    const base = 28 + Math.sin(demoT) * 4 + (Math.random()*3-1.5);
+    const spike = Math.random() < 0.015 ? 70 + Math.random()*80 : 0;
+    process(base + spike,
+      18 + Math.sin(demoT*1.2)*7,
+      14 + Math.cos(demoT*0.8)*5,
+      22 + Math.sin(demoT*0.6)*9);
+  }, 50);
+}
+
+// ── PROCESS ──
+function process(mag, x, y, z) {
+  S.field = mag;
+  S.xyz = {x, y, z};
+
+  if (S.baseline === null) {
+    S.baseline = mag;
+    document.getElementById('baseline-num').textContent = mag.toFixed(1);
+  }
+
+  const delta = Math.abs(mag - S.baseline);
+  const triggered = delta >= cfg.threshold;
+
+  updateGauge(delta, triggered);
+  updateXYZ(x, y, z);
+  updateBars(mag);
+  document.getElementById('live-num').textContent = mag.toFixed(1);
+
+  if (triggered) {
+    const now = Date.now();
+    if (now - S.lastTrigger > cfg.cooldown) {
+      S.lastTrigger = now;
+      triggerFeedback();
+      showAlert(delta);
+    }
+  }
+}
+
+// ── UI ──
+function updateGauge(delta, triggered) {
+  const maxD = 150;
+  const pct = Math.min(delta / maxD, 1);
+  const total = 226;
+  const offset = total - pct * total;
+
+  const fill = document.getElementById('gauge-fill');
+  fill.style.strokeDashoffset = offset;
+  fill.style.stroke = triggered ? 'var(--danger)' : pct > 0.55 ? 'var(--warn)' : 'var(--accent)';
+  document.getElementById('gauge-num').textContent = delta.toFixed(0);
+}
+
+function updateXYZ(x, y, z) {
+  document.getElementById('val-x').textContent = x.toFixed(1);
+  document.getElementById('val-y').textContent = y.toFixed(1);
+  document.getElementById('val-z').textContent = z.toFixed(1);
+}
+
+function updateBars(mag) {
+  S.fieldHistory.push(mag);
+  if (S.fieldHistory.length > 22) S.fieldHistory.shift();
+  const max = Math.max(...S.fieldHistory, 1);
+  const baseline = S.baseline || 0;
+  document.getElementById('field-bars').innerHTML =
+    S.fieldHistory.map(v => {
+      const h = Math.max(3, (v/max)*28);
+      const triggered = Math.abs(v - baseline) >= cfg.threshold;
+      const col = triggered ? 'var(--danger)' : 'var(--accent3)';
+      return `<div class="field-bar" style="height:${h}px;background:${col}"></div>`;
+    }).join('');
+}
+
+let alertTO = null;
+function showAlert(delta) {
+  const el = document.getElementById('trigger-alert');
+  document.getElementById('trigger-text').textContent =
+    `FIELD DETECTED · Δ ${delta.toFixed(1)} μT`;
+  el.classList.add('visible');
+  clearTimeout(alertTO);
+  alertTO = setTimeout(() => el.classList.remove('visible'), cfg.cooldown + 800);
+}
+
+function updateStatusUI(running) {
+  const dot = document.getElementById('status-dot');
+  const txt = document.getElementById('status-text');
+  const btn = document.getElementById('start-btn');
+  const btxt = document.getElementById('start-btn-text');
+
+  dot.className = 'status-dot' + (running ? ' active' : '');
+  txt.textContent = running ? 'LISTENING' : 'IDLE';
+  btn.classList.toggle('running', running);
+  btxt.textContent = running ? 'STOP DETECTION' : 'BEGIN DETECTION';
+}
+
+// ── CALIBRATE ──
+function calibrate() {
+  S.baseline = S.field || 0;
+  document.getElementById('baseline-num').textContent = S.baseline.toFixed(1);
+  const t = new Date().toLocaleTimeString();
+  S.calHistory.push(`${t} · ${S.baseline.toFixed(1)} μT`);
+  document.getElementById('cal-history').innerHTML =
+    S.calHistory.slice(-5).reverse().map(h => `<div>${h}</div>`).join('');
+  toast('Baseline set');
+}
+
+function resetCal() {
+  S.baseline = null;
+  document.getElementById('baseline-num').textContent = '—';
+  toast('Reset');
+}
+
+// ── CONTROLS ──
+function updateThreshold(v) {
+  cfg.threshold = +v;
+  document.getElementById('thresh-val').textContent = `${v} μT`;
+}
+function updateHapticInt(v) {
+  cfg.hapticInt = v/100;
+  document.getElementById('haptic-int-val').textContent = `${v}%`;
+}
+function updateHapticFreq(v) {
+  cfg.hapticFreq = +v;
+  document.getElementById('haptic-freq-val').textContent = `${v} Hz`;
+}
+function updateCooldown(v) {
+  cfg.cooldown = +v;
+  document.getElementById('cooldown-val').textContent = `${(v/1000).toFixed(1)} s`;
+}
+
+function toggleOpt(k) {
+  const map = {haptic:'hapticOn', vibrate:'vibrateOn', flash:'flashOn'};
+  cfg[map[k]] = !cfg[map[k]];
+  document.getElementById(`toggle-${k}`).classList.toggle('on', cfg[map[k]]);
+}
+
+function setPattern(p) {
+  cfg.pattern = p;
+  document.querySelectorAll('.pattern-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(`pat-${p}`).classList.add('active');
+  playHaptic(); nativeVibrate();
+}
+
+// ── TABS ──
+function switchTab(name) {
+  const names = ['detect','config','calibrate'];
+  document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', names[i]===name));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  document.getElementById(`tab-${name}`).classList.add('active');
+}
+
+// ── TOAST ──
+function toast(msg) {
+  let t = document.getElementById('_toast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = '_toast';
+    t.style.cssText = 'position:fixed;bottom:36px;left:50%;transform:translateX(-50%);background:var(--accent);color:#000;font-family:Syne,sans-serif;font-size:10px;font-weight:800;letter-spacing:2px;padding:10px 18px;z-index:10000;opacity:0;transition:opacity 0.2s;white-space:nowrap;pointer-events:none;';
+    document.body.appendChild(t);
+  }
+  t.textContent = msg.toUpperCase();
+  t.style.opacity = '1';
+  clearTimeout(t._t);
+  t._t = setTimeout(() => t.style.opacity='0', 2000);
+}
+
+// ── WAKE LOCK ──
+async function keepAwake() {
+  try {
+    if ('wakeLock' in navigator) await navigator.wakeLock.request('screen');
+  } catch(e) {}
+}
+</script>
+</body>
+</html>
