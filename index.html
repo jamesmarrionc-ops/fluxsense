@@ -5,138 +5,1255 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>ATLAS</title>
+<meta name="apple-mobile-web-app-title" content="Atlas Sync">
+<title>ATLAS SYNC</title>
 <style>
-  /* Importing the sleek, modern fonts from the Fluxsense UI */
-  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Space+Mono:wght@400;700&display=swap');
+/* ═══════════════════════════════════════════════════════
+   RESET & ROOT
+═══════════════════════════════════════════════════════ */
+:root {
+  --bg:          #000000;
+  --bg2:         #0a0a0a;
+  --surface:     #0f0f0f;
+  --surface2:    #141414;
+  --border:      #1a1a1a;
+  --border2:     #222222;
+  --accent:      #c8ff00;       /* lime — primary action */
+  --accent-dim:  rgba(200,255,0,0.08);
+  --accent-glow: rgba(200,255,0,0.15);
+  --text:        #e8e8e8;
+  --text-dim:    #3a3a3a;
+  --text-muted:  #555555;
+  --danger:      #ff3232;
+  --warn:        #ffaa00;
+  --safe:        #00ff88;
+  --mono:        'Space Mono', monospace;
+  --sans:        'Syne', sans-serif;
+}
 
-  :root {
-    --bg: #000000; /* True OLED Black for absolute stealth */
-    --stealth-text: #2a2a2a; /* Barely visible dark gray */
-    --stealth-active: #555555; /* Slightly lighter gray when tapped */
-  }
+*, *::before, *::after {
+  margin: 0; padding: 0;
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: none;
+}
 
-  /* Reset and absolute lockdown to prevent native browser behaviors */
-  *, *::before, *::after {
-    margin: 0; 
-    padding: 0;
-    box-sizing: border-box;
-    -webkit-tap-highlight-color: transparent;
-    -webkit-touch-callout: none;
-    user-select: none;
-  }
+html, body {
+  width: 100%; height: 100%;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  position: fixed;
+  inset: 0;
+  overscroll-behavior: none;
+  -webkit-overflow-scrolling: none;
+}
 
-  html, body {
-    width: 100%; 
-    height: 100%;
-    background-color: var(--bg);
-    overflow: hidden;
-    touch-action: none; /* Kills pinch-to-zoom and scrolling */
-    font-family: 'Space Mono', monospace;
-  }
+/* Noise grain overlay — adds depth to pitch black bg */
+body::after {
+  content: '';
+  position: fixed; inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.025'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 9000;
+}
 
-  /* View Containers (Single Page App Architecture) */
-  .view {
-    position: absolute;
-    top: 0; 
-    left: 0;
-    width: 100%; 
-    height: 100%;
-    display: none;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-  }
+/* ═══════════════════════════════════════════════════════
+   FONT IMPORTS
+═══════════════════════════════════════════════════════ */
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap');
 
-  /* Only the active view is displayed */
-  .view.active {
-    display: flex;
-  }
+/* ═══════════════════════════════════════════════════════
+   VIEW SYSTEM — instant switch, no fade
+═══════════════════════════════════════════════════════ */
+.view {
+  display: none;
+  position: fixed; inset: 0;
+  width: 100%; height: 100%;
+  background: var(--bg);
+  overflow: hidden;
+}
 
-  /* Navigation Layout */
-  .menu-container {
-    display: flex;
-    flex-direction: column;
-    gap: 50px;
-  }
+.view.active { display: flex; }
 
-  /* Stealth Button Styling */
-  .stealth-btn {
-    background: transparent;
-    border: none;
-    color: var(--stealth-text);
-    font-family: 'Space Mono', monospace;
-    font-size: 14px;
-    font-weight: 700;
-    letter-spacing: 6px;
-    padding: 20px 40px;
-    cursor: pointer;
-    transition: color 0.1s ease;
-  }
+/* ═══════════════════════════════════════════════════════
+   VIEW 1 — HOME
+═══════════════════════════════════════════════════════ */
+#view-home {
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #000;
+}
 
-  .stealth-btn:active {
-    color: var(--stealth-active);
-  }
+/* Subtle crosshair grid lines — barely visible */
+#view-home::before {
+  content: '';
+  position: absolute; inset: 0;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.012) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.012) 1px, transparent 1px);
+  background-size: 48px 48px;
+  pointer-events: none;
+}
 
-  /* Placeholder Styling for other views */
-  .view-title {
-    color: var(--stealth-active);
-    font-size: 10px;
-    letter-spacing: 4px;
-    margin-bottom: 30px;
-  }
+/* Center crosshair dot */
+.home-center-dot {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, calc(-50% - 40px));
+  width: 3px; height: 3px;
+  border-radius: 50%;
+  background: var(--text-dim);
+}
+
+.home-logo {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 6px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  font-family: var(--mono);
+  margin-bottom: 60px;
+  position: relative;
+}
+
+.home-logo::before {
+  content: '◈';
+  display: block;
+  text-align: center;
+  font-size: 14px;
+  color: var(--border2);
+  margin-bottom: 14px;
+  letter-spacing: 0;
+}
+
+/* Navigation buttons — minimal text, barely there */
+.home-nav {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.home-btn {
+  background: none;
+  border: none;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 4px;
+  color: var(--text-dim);
+  cursor: pointer;
+  padding: 12px 20px;
+  text-transform: uppercase;
+  transition: color 0.3s;
+  position: relative;
+}
+
+.home-btn::before,
+.home-btn::after {
+  color: #2a2a2a;
+  transition: color 0.3s;
+}
+
+.home-btn:first-child::before { content: '[ '; }
+.home-btn:first-child::after  { content: ' ]'; }
+.home-btn:last-child::before  { content: '[ '; }
+.home-btn:last-child::after   { content: ' ]'; }
+
+.home-btn:active {
+  color: var(--text-muted);
+}
+
+/* Version stamp — bottom right, barely visible */
+.home-version {
+  position: absolute;
+  bottom: max(20px, env(safe-area-inset-bottom, 20px));
+  right: 20px;
+  font-family: var(--mono);
+  font-size: 7px;
+  color: #1e1e1e;
+  letter-spacing: 2px;
+}
+
+/* ═══════════════════════════════════════════════════════
+   VIEW 2 — SETTINGS
+═══════════════════════════════════════════════════════ */
+#view-settings {
+  flex-direction: column;
+  background: var(--bg);
+  overflow: hidden;
+}
+
+.settings-topbar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  padding-top: max(16px, env(safe-area-inset-top, 16px));
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
+}
+
+.settings-back {
+  background: none; border: none;
+  font-family: var(--mono);
+  font-size: 9px; font-weight: 400;
+  letter-spacing: 3px; color: var(--text-muted);
+  text-transform: uppercase; cursor: pointer;
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 0; transition: color 0.2s;
+}
+
+.settings-back:active { color: var(--text); }
+
+.settings-back-arrow {
+  font-size: 14px; color: var(--text-dim); transition: color 0.2s;
+}
+
+.settings-title {
+  font-family: var(--mono);
+  font-size: 9px; letter-spacing: 4px;
+  color: var(--text-dim); text-transform: uppercase;
+}
+
+/* Scrollable settings body */
+.settings-body {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+  padding: 0 0 max(40px, env(safe-area-inset-bottom, 40px));
+}
+
+.settings-section {
+  padding: 24px 20px 0;
+}
+
+.settings-section-label {
+  font-family: var(--mono);
+  font-size: 7px; letter-spacing: 4px;
+  color: var(--text-dim); text-transform: uppercase;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+/* Settings row */
+.s-row {
+  display: flex; align-items: center;
+  justify-content: space-between; gap: 16px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.s-row:last-child { border-bottom: none; }
+
+.s-row-left { flex: 1; min-width: 0; }
+
+.s-label {
+  font-size: 13px; font-weight: 500;
+  color: var(--text); margin-bottom: 3px;
+}
+
+.s-desc {
+  font-family: var(--mono);
+  font-size: 8px; color: var(--text-muted);
+  letter-spacing: 0.3px; line-height: 1.7;
+}
+
+/* SELECT / DROPDOWN */
+.s-select {
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 10px; letter-spacing: 1px;
+  padding: 8px 12px;
+  cursor: pointer;
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+  min-width: 110px;
+  text-align: right;
+  border-radius: 0;
+}
+
+.s-select:focus { border-color: var(--text-dim); }
+
+/* SLIDER */
+.slider-wrap {
+  display: flex; flex-direction: column;
+  align-items: flex-end; gap: 4px;
+}
+
+.slider-display {
+  font-family: var(--mono);
+  font-size: 11px; color: var(--accent);
+  letter-spacing: 1px; min-width: 40px;
+  text-align: right;
+}
+
+input[type=range].s-slider {
+  -webkit-appearance: none; appearance: none;
+  width: 120px; height: 2px;
+  background: var(--border2);
+  outline: none; border-radius: 1px;
+  touch-action: pan-x;
+}
+
+input[type=range].s-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  cursor: pointer;
+  border: 2px solid var(--bg);
+  box-shadow: 0 0 0 1px var(--border2);
+  transition: background 0.15s;
+}
+
+input[type=range].s-slider:active::-webkit-slider-thumb {
+  background: var(--accent);
+}
+
+/* TOGGLE SWITCH */
+.toggle {
+  width: 44px; height: 24px;
+  background: var(--border2);
+  border-radius: 12px;
+  position: relative;
+  cursor: pointer;
+  transition: background 0.25s;
+  flex-shrink: 0;
+}
+
+.toggle.on { background: var(--accent); }
+
+.toggle-knob {
+  position: absolute;
+  top: 3px; left: 3px;
+  width: 18px; height: 18px;
+  background: var(--text-muted);
+  border-radius: 50%;
+  transition: transform 0.25s, background 0.25s;
+}
+
+.toggle.on .toggle-knob {
+  transform: translateX(20px);
+  background: #000;
+}
+
+/* Practice mode banner */
+.practice-banner {
+  margin: 16px 20px 0;
+  padding: 10px 14px;
+  background: rgba(255,170,0,0.06);
+  border: 1px solid rgba(255,170,0,0.2);
+  display: none;
+}
+
+.practice-banner.show { display: block; }
+
+.practice-banner-txt {
+  font-family: var(--mono);
+  font-size: 8px; color: var(--warn);
+  letter-spacing: 1px; line-height: 2;
+}
+
+/* ═══════════════════════════════════════════════════════
+   VIEW 3 — PERFORM
+═══════════════════════════════════════════════════════ */
+#view-perform {
+  flex-direction: column;
+  background: #000;
+  overflow: hidden;
+  position: relative;
+}
+
+/* The main map/content container */
+#map-container {
+  position: absolute; inset: 0;
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+/* World map aesthetic — subtle grid overlay */
+#map-container.world-map-aesthetic::before {
+  content: '';
+  position: absolute; inset: 0;
+  background-image:
+    linear-gradient(rgba(200,255,0,0.015) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(200,255,0,0.015) 1px, transparent 1px),
+    radial-gradient(ellipse 70% 40% at 50% 50%, rgba(200,255,0,0.02) 0%, transparent 100%);
+  background-size: 40px 40px, 40px 40px, 100% 100%;
+  pointer-events: none;
+}
+
+/* Standby state — shown before scan */
+.perform-standby {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  opacity: 1;
+  transition: opacity 0.2s;
+  z-index: 1;
+}
+
+.perform-standby.hidden { opacity: 0; pointer-events: none; }
+
+.standby-ring {
+  width: 60px; height: 60px;
+  border: 1px solid #1a1a1a;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  position: relative;
+  margin-bottom: 20px;
+}
+
+.standby-ring::before {
+  content: '';
+  position: absolute; inset: 6px;
+  border: 1px solid #111;
+  border-radius: 50%;
+}
+
+.standby-ring-dot {
+  width: 4px; height: 4px;
+  border-radius: 50%;
+  background: #222;
+}
+
+.standby-label {
+  font-family: var(--mono);
+  font-size: 8px; letter-spacing: 4px;
+  color: #1e1e1e; text-transform: uppercase;
+}
+
+/* SCANNING STATE — shown during active scan */
+.perform-scanning {
+  position: absolute; inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.15s;
+  z-index: 2;
+}
+
+.perform-scanning.active { opacity: 1; pointer-events: all; }
+
+/* Animated scan ring */
+.scan-ring-wrap {
+  position: relative;
+  width: 140px; height: 140px;
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: 28px;
+}
+
+.scan-ring {
+  position: absolute; inset: 0;
+  border-radius: 50%;
+  border: 1px solid transparent;
+}
+
+.scan-ring-1 {
+  border-color: #1a1a1a;
+  animation: ring-pulse 2.4s ease-in-out infinite;
+}
+.scan-ring-2 {
+  inset: 14px;
+  border-color: #141414;
+  animation: ring-pulse 2.4s 0.4s ease-in-out infinite;
+}
+.scan-ring-3 {
+  inset: 28px;
+  border-color: #111;
+  animation: ring-pulse 2.4s 0.8s ease-in-out infinite;
+}
+
+/* The sweeping scan line */
+.scan-sweep {
+  position: absolute; inset: 0;
+  border-radius: 50%;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    transparent 270deg,
+    rgba(200,255,0,0.04) 290deg,
+    rgba(200,255,0,0.12) 360deg
+  );
+  animation: sweep 2.4s linear infinite;
+}
+
+.scan-center {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: #1e1e1e;
+  position: relative; z-index: 1;
+}
+
+.scan-label {
+  font-family: var(--mono);
+  font-size: 8px; letter-spacing: 5px;
+  color: #2a2a2a; text-transform: uppercase;
+  animation: label-blink 2.4s ease-in-out infinite;
+}
+
+/* RESULT STATE — shown after location found */
+.perform-result {
+  position: absolute; inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 32px;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.2s;
+  z-index: 3;
+}
+
+.perform-result.active { opacity: 1; pointer-events: all; }
+
+.result-eyebrow {
+  font-family: var(--mono);
+  font-size: 7px; letter-spacing: 5px;
+  color: var(--text-dim); text-transform: uppercase;
+  margin-bottom: 16px;
+}
+
+.result-location {
+  font-size: clamp(22px, 6vw, 30px);
+  font-weight: 800;
+  letter-spacing: -1px;
+  color: var(--text);
+  text-align: center;
+  line-height: 1.2;
+  margin-bottom: 10px;
+}
+
+.result-coords {
+  font-family: var(--mono);
+  font-size: 9px; letter-spacing: 2px;
+  color: var(--text-dim);
+  margin-bottom: 32px;
+}
+
+.result-conf {
+  display: flex; align-items: center; gap: 8px;
+}
+
+.result-conf-bar-track {
+  width: 80px; height: 2px;
+  background: var(--border2);
+}
+
+.result-conf-bar-fill {
+  height: 100%;
+  background: var(--accent);
+  width: 0%;
+  transition: width 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.result-conf-label {
+  font-family: var(--mono);
+  font-size: 8px; color: var(--accent); letter-spacing: 1px;
+}
+
+/* ── PRACTICE MODE INDICATOR ── */
+.practice-indicator {
+  position: absolute;
+  top: max(14px, env(safe-area-inset-top, 14px));
+  left: 50%; transform: translateX(-50%);
+  font-family: var(--mono);
+  font-size: 7px; letter-spacing: 3px;
+  color: var(--warn);
+  text-transform: uppercase;
+  z-index: 10;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.practice-indicator.show { opacity: 1; }
+
+/* ── GESTURE HINT — only in practice mode ── */
+.gesture-hint {
+  position: absolute;
+  bottom: max(20px, env(safe-area-inset-bottom, 20px));
+  left: 50%; transform: translateX(-50%);
+  font-family: var(--mono);
+  font-size: 7px; letter-spacing: 2px;
+  color: #1e1e1e; text-transform: uppercase;
+  z-index: 10; white-space: nowrap;
+  opacity: 0; transition: opacity 0.3s;
+}
+
+.gesture-hint.show { opacity: 1; }
+
+/* ═══════════════════════════════════════════════════════
+   HIDDEN ELEMENTS (camera / haptic hack)
+═══════════════════════════════════════════════════════ */
+#haptic-hack {
+  position: fixed;
+  opacity: 0; pointer-events: none;
+  top: -9999px; left: -9999px;
+  width: 1px; height: 1px;
+}
+
+#camera-feed {
+  position: fixed;
+  top: -9999px; left: -9999px;
+  width: 1px; height: 1px;
+  opacity: 0; pointer-events: none;
+}
+
+#camera-canvas {
+  position: fixed;
+  top: -9999px; left: -9999px;
+  width: 1px; height: 1px;
+  opacity: 0; pointer-events: none;
+}
+
+/* ═══════════════════════════════════════════════════════
+   SHARED SCROLLBAR
+═══════════════════════════════════════════════════════ */
+::-webkit-scrollbar { width: 2px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border2); }
+
+/* ═══════════════════════════════════════════════════════
+   ANIMATIONS
+═══════════════════════════════════════════════════════ */
+@keyframes ring-pulse {
+  0%, 100% { opacity: 0.4; transform: scale(1); }
+  50%       { opacity: 0.8; transform: scale(1.03); }
+}
+
+@keyframes sweep {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+@keyframes label-blink {
+  0%, 100% { opacity: 0.3; }
+  50%       { opacity: 0.7; }
+}
+
+@keyframes conf-reveal {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
 </style>
 </head>
 <body>
 
-  <div id="view-home" class="view active">
-    <div class="menu-container">
-      <button class="stealth-btn" onclick="switchView('view-perform')">[ PERFORM ]</button>
-      <button class="stealth-btn" onclick="switchView('view-settings')">[ SETTINGS ]</button>
-    </div>
+<!-- ══════════════════════════════════════════════════════
+     HIDDEN ELEMENTS
+══════════════════════════════════════════════════════ -->
+
+<!-- iOS Haptic Hack: programmatically toggling a checkbox
+     triggers a subtle Taptic Engine buzz on iOS Safari -->
+<input type="checkbox" id="haptic-hack">
+
+<!-- Camera elements for future OCR integration -->
+<video  id="camera-feed"  autoplay playsinline muted></video>
+<canvas id="camera-canvas"></canvas>
+
+<!-- ══════════════════════════════════════════════════════
+     VIEW 1 — HOME
+══════════════════════════════════════════════════════ -->
+<div class="view active" id="view-home">
+
+  <div class="home-center-dot"></div>
+
+  <div class="home-logo">ATLAS SYNC</div>
+
+  <nav class="home-nav">
+    <button class="home-btn" id="btn-perform">PERFORM</button>
+    <button class="home-btn" id="btn-settings">SETTINGS</button>
+  </nav>
+
+  <div class="home-version">v0.1.0 · ALPHA</div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     VIEW 2 — SETTINGS
+══════════════════════════════════════════════════════ -->
+<div class="view" id="view-settings">
+
+  <div class="settings-topbar">
+    <button class="settings-back" id="btn-back-settings">
+      <span class="settings-back-arrow">←</span>
+      HOME
+    </button>
+    <div class="settings-title">CONFIG</div>
+    <div style="width:70px"></div><!-- spacer -->
   </div>
 
-  <div id="view-settings" class="view">
-    <div class="view-title">SETTINGS VAULT</div>
-    <button class="stealth-btn" onclick="switchView('view-home')">[ BACK ]</button>
-  </div>
+  <div class="settings-body">
 
-  <div id="view-perform" class="view">
-    <div class="view-title">SYSTEM ARMED</div>
+    <!-- CAMERA -->
+    <div class="settings-section">
+      <div class="settings-section-label">Camera</div>
+
+      <div class="s-row">
+        <div class="s-row-left">
+          <div class="s-label">Camera Selection</div>
+          <div class="s-desc">Which lens to use for scanning</div>
+        </div>
+        <select class="s-select" id="setting-camera">
+          <option value="rear">REAR</option>
+          <option value="front">FRONT</option>
+        </select>
+      </div>
     </div>
 
-  <script>
-    // --- SINGLE PAGE APP NAVIGATION LOGIC ---
-    function switchView(viewId) {
-      document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-      document.getElementById(viewId).classList.add('active');
+    <!-- TIMING -->
+    <div class="settings-section">
+      <div class="settings-section-label">Timing</div>
+
+      <div class="s-row">
+        <div class="s-row-left">
+          <div class="s-label">Delay Timer</div>
+          <div class="s-desc">Seconds before scan activates</div>
+        </div>
+        <div class="slider-wrap">
+          <div class="slider-display" id="delay-display">0s</div>
+          <input type="range" class="s-slider" id="setting-delay"
+            min="0" max="10" step="1" value="0"
+            oninput="onDelayChange(this.value)"
+            ontouchmove="onDelayChange(this.value)">
+        </div>
+      </div>
+    </div>
+
+    <!-- FEEDBACK -->
+    <div class="settings-section">
+      <div class="settings-section-label">Feedback</div>
+
+      <div class="s-row">
+        <div class="s-row-left">
+          <div class="s-label">Haptic Feedback</div>
+          <div class="s-desc">Buzz on successful location lock</div>
+        </div>
+        <div class="toggle on" id="toggle-haptic" onclick="onToggle('haptic')">
+          <div class="toggle-knob"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AI -->
+    <div class="settings-section">
+      <div class="settings-section-label">AI Engine</div>
+
+      <div class="s-row">
+        <div class="s-row-left">
+          <div class="s-label">Confidence Threshold</div>
+          <div class="s-desc">Strict = fewer but more accurate results</div>
+        </div>
+        <select class="s-select" id="setting-confidence">
+          <option value="95">STRICT 95%</option>
+          <option value="75">LOOSE 75%</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- DISPLAY -->
+    <div class="settings-section">
+      <div class="settings-section-label">Display</div>
+
+      <div class="s-row">
+        <div class="s-row-left">
+          <div class="s-label">Waiting Screen</div>
+          <div class="s-desc">Aesthetic shown before scan triggers</div>
+        </div>
+        <select class="s-select" id="setting-aesthetic"
+          onchange="onAestheticChange(this.value)">
+          <option value="black">BLACK</option>
+          <option value="map">WORLD MAP</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- PRACTICE -->
+    <div class="settings-section">
+      <div class="settings-section-label">Practice</div>
+
+      <div class="s-row">
+        <div class="s-row-left">
+          <div class="s-label">Practice Mode</div>
+          <div class="s-desc">Shows UI hints and simulated results</div>
+        </div>
+        <div class="toggle" id="toggle-practice" onclick="onToggle('practice')">
+          <div class="toggle-knob"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Practice warning -->
+    <div class="practice-banner" id="practice-banner">
+      <div class="practice-banner-txt">
+        PRACTICE MODE ACTIVE.<br>
+        RESULTS ARE SIMULATED. DISABLE BEFORE PERFORMING.
+      </div>
+    </div>
+
+    <!-- Padding bottom -->
+    <div style="height:20px"></div>
+
+  </div><!-- /settings-body -->
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     VIEW 3 — PERFORM
+══════════════════════════════════════════════════════ -->
+<div class="view" id="view-perform">
+
+  <!-- Practice indicator -->
+  <div class="practice-indicator" id="practice-indicator">
+    ◈ PRACTICE
+  </div>
+
+  <!-- Gesture hint (only in practice mode) -->
+  <div class="gesture-hint" id="gesture-hint">
+    ↓↓ TWO-FINGER SWIPE DOWN TO EXIT
+  </div>
+
+  <!-- Main map / content container -->
+  <div id="map-container">
+
+    <!-- STANDBY STATE -->
+    <div class="perform-standby" id="perform-standby">
+      <div class="standby-ring">
+        <div class="standby-ring-dot"></div>
+      </div>
+      <div class="standby-label">READY</div>
+    </div>
+
+    <!-- SCANNING STATE -->
+    <div class="perform-scanning" id="perform-scanning">
+      <div class="scan-ring-wrap">
+        <div class="scan-ring scan-ring-1"></div>
+        <div class="scan-ring scan-ring-2"></div>
+        <div class="scan-ring scan-ring-3"></div>
+        <div class="scan-sweep"></div>
+        <div class="scan-center"></div>
+      </div>
+      <div class="scan-label">SCANNING</div>
+    </div>
+
+    <!-- RESULT STATE -->
+    <div class="perform-result" id="perform-result">
+      <div class="result-eyebrow">Location Identified</div>
+      <div class="result-location" id="result-location-text">—</div>
+      <div class="result-coords" id="result-coords-text">—</div>
+      <div class="result-conf">
+        <div class="result-conf-bar-track">
+          <div class="result-conf-bar-fill" id="result-conf-bar"></div>
+        </div>
+        <div class="result-conf-label" id="result-conf-label">—</div>
+      </div>
+    </div>
+
+  </div><!-- /map-container -->
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════
+   ATLAS SYNC — v0.1.0
+   Base SPA framework. API stubs marked with ⬛ INJECT HERE.
+═══════════════════════════════════════════════════════════ */
+
+// ─────────────────────────────────────────────
+// APP STATE
+// ─────────────────────────────────────────────
+const AppState = {
+  currentView: 'home',   // 'home' | 'settings' | 'perform'
+  isScanning:  false,
+  scanTimer:   null,
+  settings: {
+    camera:      'rear',
+    delay:       0,
+    haptic:      true,
+    confidence:  95,
+    aesthetic:   'black',
+    practice:    false
+  }
+};
+
+// Practice mode: simulated location pool
+const PRACTICE_LOCATIONS = [
+  { name: 'Tokyo, Japan',           coords: '35.6762° N, 139.6503° E', conf: 94 },
+  { name: 'New York City, USA',     coords: '40.7128° N, 74.0060° W',  conf: 97 },
+  { name: 'Paris, France',          coords: '48.8566° N, 2.3522° E',   conf: 91 },
+  { name: 'Sydney, Australia',      coords: '33.8688° S, 151.2093° E', conf: 88 },
+  { name: 'Cairo, Egypt',           coords: '30.0444° N, 31.2357° E',  conf: 93 },
+  { name: 'São Paulo, Brazil',      coords: '23.5505° S, 46.6333° W',  conf: 89 },
+  { name: 'London, United Kingdom', coords: '51.5074° N, 0.1278° W',   conf: 96 },
+  { name: 'Mumbai, India',          coords: '19.0760° N, 72.8777° E',  conf: 92 },
+];
+
+// ─────────────────────────────────────────────
+// VIEW MANAGEMENT — instant switch, no fade
+// ─────────────────────────────────────────────
+
+/**
+ * Navigate to a named view instantly.
+ * @param {'home'|'settings'|'perform'} viewName
+ */
+function navigateTo(viewName) {
+  // Hide all views
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+
+  // Show target
+  document.getElementById(`view-${viewName}`).classList.add('active');
+  AppState.currentView = viewName;
+
+  // Handle perform-specific setup
+  if (viewName === 'perform') {
+    onEnterPerform();
+  } else {
+    onLeavePerform();
+  }
+}
+
+// ─────────────────────────────────────────────
+// PERFORM VIEW — enter / leave
+// ─────────────────────────────────────────────
+
+function onEnterPerform() {
+  // Apply aesthetic setting to map container
+  const container = document.getElementById('map-container');
+  if (AppState.settings.aesthetic === 'map') {
+    container.classList.add('world-map-aesthetic');
+  } else {
+    container.classList.remove('world-map-aesthetic');
+  }
+
+  // Reset to standby state
+  setPerformState('standby');
+
+  // Practice mode indicators
+  const practiceOn = AppState.settings.practice;
+  document.getElementById('practice-indicator').classList.toggle('show', practiceOn);
+  document.getElementById('gesture-hint').classList.toggle('show', practiceOn);
+
+  // ⬛ INJECT HERE: Start camera feed if needed
+  // startCameraFeed(AppState.settings.camera);
+  console.log('[ATLAS] Perform view entered. Camera:', AppState.settings.camera);
+}
+
+function onLeavePerform() {
+  // Cancel any running scan
+  stopScan();
+
+  // ⬛ INJECT HERE: Stop camera feed
+  // stopCameraFeed();
+  console.log('[ATLAS] Perform view exited.');
+}
+
+/**
+ * Switch between standby / scanning / result states
+ * @param {'standby'|'scanning'|'result'} state
+ */
+function setPerformState(state) {
+  document.getElementById('perform-standby').classList.toggle('hidden', state !== 'standby');
+  document.getElementById('perform-scanning').classList.toggle('active', state === 'scanning');
+  document.getElementById('perform-result').classList.toggle('active',   state === 'result');
+}
+
+// ─────────────────────────────────────────────
+// CORE: startHunterScan()
+// Triggered by Volume Up press in Perform view
+// ─────────────────────────────────────────────
+
+/**
+ * Main entry point for a scan attempt.
+ * Handles delay timer, then fires the OCR/AI pipeline.
+ */
+function startHunterScan() {
+  if (AppState.isScanning) return; // Prevent double-trigger
+  AppState.isScanning = true;
+
+  const delay = AppState.settings.delay * 1000;
+
+  console.log(`[ATLAS] startHunterScan() — delay: ${AppState.settings.delay}s, confidence: ${AppState.settings.confidence}%`);
+
+  if (delay > 0) {
+    // Show standby during countdown, then switch to scanning
+    setPerformState('standby');
+    AppState.scanTimer = setTimeout(() => {
+      setPerformState('scanning');
+      executeScan();
+    }, delay);
+  } else {
+    setPerformState('scanning');
+    executeScan();
+  }
+}
+
+/**
+ * Stop any active scan and reset to standby.
+ */
+function stopScan() {
+  if (AppState.scanTimer) {
+    clearTimeout(AppState.scanTimer);
+    AppState.scanTimer = null;
+  }
+  AppState.isScanning = false;
+
+  if (AppState.currentView === 'perform') {
+    setPerformState('standby');
+  }
+}
+
+/**
+ * The actual scan pipeline. In production, this fires:
+ *   1. Camera capture → canvas frame grab
+ *   2. Canvas → base64 → OCR API call
+ *   3. OCR result → AI location parser
+ *   4. Parsed location → Google Maps flyTo reveal
+ */
+function executeScan() {
+  console.log('[ATLAS] executeScan() — grabbing camera frame...');
+
+  // ⬛ INJECT HERE: Capture camera frame
+  // const frame = captureFrame(); // grabs from #camera-canvas
+
+  // ⬛ INJECT HERE: Send frame to OCR backend
+  // const ocrText = await callOCRBackend(frame);
+
+  // ⬛ INJECT HERE: Parse OCR text to location
+  // const location = await callLocationParser(ocrText, AppState.settings.confidence);
+
+  // ⬛ INJECT HERE: Fly Google Maps to location
+  // mapFlyTo(location.coords);
+
+  // --- STUB / PRACTICE MODE SIMULATION ---
+  if (AppState.settings.practice) {
+    // Simulate a 2-second "processing" delay then show a fake result
+    const mockTimeout = setTimeout(() => {
+      const pick = PRACTICE_LOCATIONS[Math.floor(Math.random() * PRACTICE_LOCATIONS.length)];
+      onLocationFound(pick.name, pick.coords, pick.conf);
+    }, 2200);
+    AppState.scanTimer = mockTimeout;
+    return;
+  }
+
+  // Production: result will come via callback from the injected API chain
+  // onLocationFound(name, coords, confidence) will be called when ready
+  console.log('[ATLAS] Waiting for OCR + AI result...');
+}
+
+/**
+ * Called when the full pipeline resolves with a location.
+ * @param {string} locationName — Human-readable place name
+ * @param {string} coords       — Formatted coordinate string
+ * @param {number} confidence   — 0-100 confidence score
+ */
+function onLocationFound(locationName, coords, confidence) {
+  AppState.isScanning = false;
+
+  console.log(`[ATLAS] Location found: ${locationName} (${confidence}% confidence)`);
+
+  // Populate result UI
+  document.getElementById('result-location-text').textContent = locationName;
+  document.getElementById('result-coords-text').textContent   = coords;
+  document.getElementById('result-conf-label').textContent    = `${confidence}%`;
+
+  // Switch to result state
+  setPerformState('result');
+
+  // Animate confidence bar
+  requestAnimationFrame(() => {
+    setTimeout(() => {
+      document.getElementById('result-conf-bar').style.width = `${confidence}%`;
+    }, 80);
+  });
+
+  // Fire haptic feedback
+  if (AppState.settings.haptic) {
+    triggerHapticHit();
+  }
+
+  // ⬛ INJECT HERE: Trigger Google Maps flyTo animation
+  // mapFlyTo(coords, { zoom: 14, duration: 2000 });
+
+  console.log('[ATLAS] onLocationFound() complete.');
+}
+
+// ─────────────────────────────────────────────
+// HAPTIC HACK — iOS Safari workaround
+// ─────────────────────────────────────────────
+
+/**
+ * Triggers a physical haptic buzz on iOS Safari by toggling
+ * the checked state of a hidden checkbox. Apple's Taptic Engine
+ * fires on checkbox state change when triggered by user gesture chain.
+ *
+ * NOTE: Must be called within a gesture/event callback chain to work.
+ *       Does NOT work from setTimeout or async context alone on iOS.
+ */
+function triggerHapticHit() {
+  const el = document.getElementById('haptic-hack');
+  el.checked = !el.checked;
+  console.log('[ATLAS] triggerHapticHit() — checkbox toggled:', el.checked);
+
+  // Android fallback
+  if (navigator.vibrate) {
+    navigator.vibrate([60, 40, 60]);
+  }
+}
+
+// ─────────────────────────────────────────────
+// VOLUME BUTTON LISTENER
+// State-scoped: only fires in Perform view
+// ─────────────────────────────────────────────
+
+/**
+ * Physical Volume Up button → keydown event.
+ * MediaSessionAction 'nexttrack' also catches BT headphone forward button.
+ */
+document.addEventListener('keydown', (e) => {
+  // Only respond in Perform view
+  if (AppState.currentView !== 'perform') return;
+
+  // Volume Up: AudioVolumeUp (Android WebView), or ArrowUp fallback for testing
+  if (e.key === 'AudioVolumeUp' || e.key === 'ArrowUp') {
+    e.preventDefault();
+    console.log('[ATLAS] Volume Up detected in Perform view → startHunterScan()');
+    startHunterScan();
+  }
+});
+
+// Also intercept volume via Media Session API (better iOS support)
+if ('mediaSession' in navigator) {
+  try {
+    navigator.mediaSession.setActionHandler('nexttrack', () => {
+      if (AppState.currentView !== 'perform') return;
+      console.log('[ATLAS] Media nexttrack (vol+) in Perform view → startHunterScan()');
+      startHunterScan();
+    });
+  } catch(e) {
+    console.warn('[ATLAS] MediaSession nexttrack not supported:', e);
+  }
+}
+
+// ─────────────────────────────────────────────
+// TWO-FINGER SWIPE DOWN — Stealth Exit
+// ─────────────────────────────────────────────
+
+(function initStealthExit() {
+  let touchStart = [];
+  let touchStartY = 0;
+
+  document.getElementById('view-perform').addEventListener('touchstart', (e) => {
+    touchStart = Array.from(e.touches);
+    touchStartY = e.touches[0]?.clientY ?? 0;
+  }, { passive: true });
+
+  document.getElementById('view-perform').addEventListener('touchend', (e) => {
+    // Require exactly 2 fingers
+    if (touchStart.length !== 2) return;
+
+    const endY = e.changedTouches[0]?.clientY ?? 0;
+    const deltaY = endY - touchStartY;
+
+    // Must swipe DOWN at least 60px
+    if (deltaY > 60) {
+      console.log('[ATLAS] Two-finger swipe down detected → exiting Perform view');
+      navigateTo('home');
     }
+  }, { passive: true });
+})();
 
-    // --- TWO-FINGER SWIPE DOWN (Stealth Exit) ---
-    let touchStartY = 0;
-    let isTwoFingerSwipe = false;
+// ─────────────────────────────────────────────
+// SETTINGS HANDLERS
+// ─────────────────────────────────────────────
 
-    document.addEventListener('touchstart', (e) => {
-      // Only listen if we are in the PERFORM view and two fingers are used
-      if (e.touches.length === 2 && document.getElementById('view-perform').classList.contains('active')) {
-        isTwoFingerSwipe = true;
-        // Get the average starting Y position of both fingers
-        touchStartY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
-      } else {
-        isTwoFingerSwipe = false;
-      }
-    });
+function onDelayChange(val) {
+  AppState.settings.delay = parseInt(val);
+  document.getElementById('delay-display').textContent =
+    val === '0' ? '0s' : `${val}s`;
+}
 
-    document.addEventListener('touchend', (e) => {
-      if (isTwoFingerSwipe) {
-        // Because touchend might only trigger for one finger leaving at a time, 
-        // we execute the exit immediately upon release if a downward motion was detected.
-        // For production, you can calculate the distance traveled.
-        switchView('view-home');
-        isTwoFingerSwipe = false;
-        touchStartY = 0;
-      }
-    });
-  </script>
+function onAestheticChange(val) {
+  AppState.settings.aesthetic = val;
+}
+
+function onToggle(key) {
+  const idMap = { haptic: 'toggle-haptic', practice: 'toggle-practice' };
+  const stateMap = { haptic: 'haptic', practice: 'practice' };
+
+  AppState.settings[stateMap[key]] = !AppState.settings[stateMap[key]];
+  const isOn = AppState.settings[stateMap[key]];
+
+  document.getElementById(idMap[key]).classList.toggle('on', isOn);
+
+  if (key === 'practice') {
+    document.getElementById('practice-banner').classList.toggle('show', isOn);
+  }
+
+  console.log(`[ATLAS] Setting "${key}" →`, isOn);
+}
+
+// Sync dropdowns on settings change
+document.getElementById('setting-camera').addEventListener('change', (e) => {
+  AppState.settings.camera = e.target.value;
+  console.log('[ATLAS] Camera setting:', AppState.settings.camera);
+});
+
+document.getElementById('setting-confidence').addEventListener('change', (e) => {
+  AppState.settings.confidence = parseInt(e.target.value);
+  console.log('[ATLAS] Confidence threshold:', AppState.settings.confidence);
+});
+
+// ─────────────────────────────────────────────
+// NAVIGATION BINDINGS
+// ─────────────────────────────────────────────
+
+document.getElementById('btn-perform').addEventListener('click', () => {
+  navigateTo('perform');
+});
+
+document.getElementById('btn-settings').addEventListener('click', () => {
+  navigateTo('settings');
+});
+
+document.getElementById('btn-back-settings').addEventListener('click', () => {
+  navigateTo('home');
+});
+
+// ─────────────────────────────────────────────
+// INIT
+// ─────────────────────────────────────────────
+
+console.log('[ATLAS] Atlas Sync v0.1.0 initialized.');
+console.log('[ATLAS] Current view:', AppState.currentView);
+
+/* ─────────────────────────────────────────────
+   FUTURE INJECTION POINTS SUMMARY
+   ─────────────────────────────────────────────
+   startCameraFeed(facingMode)  → opens getUserMedia stream to #camera-feed
+   stopCameraFeed()             → closes all media tracks
+   captureFrame()               → draws #camera-feed to #camera-canvas, returns ImageData
+   callOCRBackend(frame)        → POSTs base64 frame to OCR API, returns raw text
+   callLocationParser(text, threshold) → AI parses text to {name, coords, confidence}
+   mapFlyTo(coords, options)    → Google Maps / Mapbox animateTo call
+   ───────────────────────────────────────────── */
+</script>
 </body>
 </html>
