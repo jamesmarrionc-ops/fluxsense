@@ -837,6 +837,8 @@ const cfg = {
 const S = {
   running: false,
   baseline: null,
+  headingBaseline: null,
+  currentCombinedHeading: null,
   lastTrigger: 0,
   calHistory: [],
   field: 0,
@@ -984,31 +986,45 @@ function startOrientation() {
   window.addEventListener('deviceorientation', onOrientation, true);
 }
 
-// ── THE UPDATED COMPASS/MAGNET LOGIC ──
+// ── GYRO + COMPASS FILTER ──
 function onOrientation(e) {
   if (!S.running) return;
+  
   const h = e.webkitCompassHeading;
+  const alpha = e.alpha;
   
   if (h === undefined) return; 
 
   const a = e.alpha || 0, b = e.beta || 0, g = e.gamma || 0;
 
-  if (S.baseline === null) {
-      S.baseline = h;
-      document.getElementById('baseline-num').textContent = h.toFixed(1);
+  // Combine compass and gyro
+  // iOS alpha goes 0-360 counter-clockwise. Compass goes 0-360 clockwise.
+  let combinedHeading = h;
+  if (alpha !== undefined) {
+    combinedHeading = (h + alpha) % 360;
+  }
+  
+  // Save to state so calibrate() can access it
+  S.currentCombinedHeading = combinedHeading;
+
+  // Set the baseline for the rotation lock
+  if (S.headingBaseline === null) {
+      S.headingBaseline = combinedHeading;
   }
 
-  let diff = h - S.baseline;
+  // Calculate the difference between current combined heading and the baseline
+  let diff = combinedHeading - S.headingBaseline;
   
+  // Handle 360-degree wrap-around math cleanly
   diff = (diff + 180) % 360 - 180;
   if (diff < -180) diff += 360;
 
   let delta = Math.abs(diff);
-  let pseudoMag = S.baseline + delta;
 
-  if (delta > 0) {
-      pseudoMag = S.baseline + (delta * 1.5); 
-  }
+  // We pass a simulated absolute magnitude into process().
+  // 50 acts as our normal ambient baseline.
+  // We multiply the delta by 6.0 so the weak AirTag triggers it easily.
+  let pseudoMag = 50 + (delta * 6.0); 
 
   process(pseudoMag, a, b, g);
 }
@@ -1112,6 +1128,9 @@ function updateStatusUI(running) {
 // ── CALIBRATE ──
 function calibrate() {
   S.baseline = S.field || 0;
+  // Ensure the rotation-filter is zeroed out at the same time
+  S.headingBaseline = S.currentCombinedHeading || 0; 
+  
   document.getElementById('baseline-num').textContent = S.baseline.toFixed(1);
   const t = new Date().toLocaleTimeString();
   S.calHistory.push(`${t} · ${S.baseline.toFixed(1)} μT`);
@@ -1122,6 +1141,7 @@ function calibrate() {
 
 function resetCal() {
   S.baseline = null;
+  S.headingBaseline = null;
   document.getElementById('baseline-num').textContent = '—';
   toast('Reset');
 }
